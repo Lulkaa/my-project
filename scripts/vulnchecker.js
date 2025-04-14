@@ -23,6 +23,9 @@ const path = require('path');
       V05: content.includes('execFile') && content.includes('safeCommands'),
       V06: content.includes('req.user.role') && content.includes("'CUSTOMER'"),
       V10: content.includes('req.user') && content.match(/(assignedTo|username|role)/),
+      V02: content.includes('req.user.username') && content.includes("!== username"),
+      V03: content.includes('req.user.role') && content.includes("'ADMIN'"),
+
     };
 
     rules.forEach(rule => {
