@@ -10,6 +10,7 @@ const userRoutes = require('./routes/userRoutes');
 const packageRoutes = require('./routes/packageRoutes');
 const imageRoutes = require('./routes/imageRoutes');
 const utilsRoutes = require('./routes/utilsRoutes');
+const getpackageRoute = require('./routes/getpackageRoute');
 
 const app = express();
 
@@ -24,6 +25,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/packages', packageRoutes);
 app.use('/api/images', imageRoutes);
 app.use('/api/utils', utilsRoutes);
+app.use('/api/package', getpackageRoute);
 
 
 // ❌ Errores verbosos

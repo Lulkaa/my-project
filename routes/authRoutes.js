@@ -8,7 +8,7 @@ const router = express.Router();
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
-const SECRET = "miClaveSecreta123"; // [x] Hardcoded secret
+const SECRET = process.env.JWT_SECRET || 'insecuresecret'; // [x] Hardcoded secret
 
 // [x] Insecure registration: no input validation, no password hashing, role can be set arbitrarily
 router.post("/register", async (req, res) => {
