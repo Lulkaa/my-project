@@ -25,6 +25,7 @@ const path = require('path');
       V10: content.includes('req.user') && content.match(/(assignedTo|username|role)/),
       V02: content.includes('req.user.username') && content.includes("!== username"),
       V03: content.includes('req.user.role') && content.includes("'ADMIN'"),
+      V11: content.includes('escape-string-regexp') || content.includes('pattern.length'),
 
     };
 
