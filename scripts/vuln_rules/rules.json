@@ -64,7 +64,11 @@
     "name": "ReDoS: vulnerable regex pattern",
     "regex": "new\\s+RegExp\\s*\\(.*\\$\\{pattern.*\\}\\)\\+",
     "description": "User-controlled pattern is grouped and repeated in a regex. May lead to ReDoS."
-  }
-  
-  
+  },
+  {
+    "id": "V12",
+    "name": "Missing Rate Limiting on Login",
+    "regex": "router\\.post\\(\\s*['\\\"]\\/login['\\\"]\\s*,\\s*async\\s*\\(",
+    "description": "Login endpoint is not protected with rate limiting middleware"
+  }  
 ]
