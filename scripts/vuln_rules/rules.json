@@ -62,7 +62,9 @@
   {
     "id": "V11",
     "name": "ReDoS: vulnerable regex pattern",
-    "regex": "new RegExp\\(\\s*`\\^\\(\\$\\{pattern\\}\\)\\+\\$`\\s*\\)",
-    "description": "Use of user-supplied nested regex without validation or escaping, may cause ReDoS"
-  }  
+    "regex": "new\\s+RegExp\\s*\\(.*\\$\\{pattern.*\\}\\)\\+",
+    "description": "User-controlled pattern is grouped and repeated in a regex. May lead to ReDoS."
+  }
+  
+  
 ]
