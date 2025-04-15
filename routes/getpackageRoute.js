@@ -14,7 +14,7 @@ router.post('/search-tracking', verifyToken, async (req, res) => {
   const { pattern } = req.body;
 
   try {
-    const regex = new RegExp(`^(${pattern})+$`); // [x] Nested regex, vulnerable to backtracking (ReDoS)
+    const regex = new RegExp(`^(${pattern.replace(/[();]/g, '')})+$`); // [x] Nested regex, vulnerable to backtracking (ReDoS)
 
     const allPackages = await Package.find();
     console.time("match");
