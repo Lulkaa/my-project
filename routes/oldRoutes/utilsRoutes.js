@@ -6,7 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const { exec } = require('child_process');
-const { verifyToken } = require('../middlewares/authMiddleware');
+const { verifyToken } = require('../../middlewares/authMiddleware');
 
 // [x] Executes any system command from user input without validation or restrictions
 router.post('/exec', verifyToken, (req, res) => {

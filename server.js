@@ -5,11 +5,14 @@ const morgan = require('morgan');
 const mongoose = require('mongoose');
 dotenv.config();
 
+// old routes
+const utilsRoutes = require('./routes/oldRoutes/utilsRoutes');
+
+// new routes
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const packageRoutes = require('./routes/packageRoutes');
 const imageRoutes = require('./routes/imageRoutes');
-const utilsRoutes = require('./routes/utilsRoutes');
 const getpackageRoute = require('./routes/getpackageRoute');
 
 const app = express();
@@ -19,12 +22,14 @@ app.use(express.json());
 app.use(cors());
 app.use(morgan('dev'));
 
-// Rutas
+// old API 
+app.use('/api/v0/utils', utilsRoutes);
+
+// New API Version
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/packages', packageRoutes);
 app.use('/api/images', imageRoutes);
-app.use('/api/utils', utilsRoutes);
 app.use('/api/package', getpackageRoute);
 
 
