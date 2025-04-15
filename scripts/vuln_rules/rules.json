@@ -58,5 +58,11 @@
     "name": "Broken Access Control: unauthorized package update",
     "regex": "Package\\.findOneAndUpdate\\(",
     "description": "Package update operation without validating ownership or access rights"
-  }
+  },
+  {
+    "id": "V11",
+    "name": "ReDoS: vulnerable regex pattern",
+    "regex": "new RegExp\\(\\s*`\\^\\(\\$\\{pattern\\}\\)\\+\\$`\\s*\\)",
+    "description": "Use of user-supplied nested regex without validation or escaping, may cause ReDoS"
+  }  
 ]
