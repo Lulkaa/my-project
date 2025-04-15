@@ -18,14 +18,14 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"username\": \"lucas\", \"password\": \"1234\"}"
+          "raw": "{\"username\": \"carlos\", \"password\": \"1234\"}"
         },
         "url": "{{base_url}}/api/auth/login"
       },
       "response": []
     },
     {
-      "name": "Users - Ver todos (Broken Access)",
+      "name": "Users - Ver Todos los usuarios",
       "request": {
         "method": "GET",
         "header": [
@@ -39,7 +39,31 @@
       "response": []
     },
     {
-      "name": "Users - Escalada de privilegios",
+      "name": "Users - Modificación de usuario",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"password\": \"hackeado\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{base_url}}/api/users/maria"
+      },
+      "response": []
+    },
+    {
+      "name": "Users - Modificar Privilegios",
       "request": {
         "method": "POST",
         "header": [
@@ -76,9 +100,33 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"trackingNumber\": \"ABC123\", \"sender\": \"lucas\", \"recipient\": \"maria\", \"address\": \"123 Main Street\", \"status\": \"PENDING\"}"
+          "raw": "{\"trackingNumber\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!\", \"sender\": \"lucas\", \"recipient\": \"maria\", \"address\": \"123 Main Street\", \"status\": \"PENDING\"}"
         },
         "url": "{{base_url}}/api/packages/create"
+      },
+      "response": []
+    },
+    {
+      "name": "Packages - Search Tracking",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"pattern\": \"a+\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{base_url}}/api/package/search-tracking"
       },
       "response": []
     },
@@ -120,9 +168,9 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"command\": \"ls -la\"}"
+          "raw": "{\"command\": \"ls\"}"
         },
-        "url": "{{base_url}}/api/utils/exec"
+        "url": "{{base_url}}/api/v0/utils/exec"
       },
       "response": []
     }
@@ -148,7 +196,7 @@
   "variable": [
     {
       "key": "token",
-      "value": ""
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmNiYjg2MDRmOWRmNGZhZDY5ZWU4YiIsInVzZXJuYW1lIjoiY2FybG9zIiwicm9sZSI6IkRJU1BBVENIRVIiLCJpYXQiOjE3NDQ2NDQzNzIsImV4cCI6MTc0NTI0OTE3Mn0._nijQ0RYXATVY7hG4Z-lmmlmBixRr3chBaK2nwWcmZY"
     },
     {
       "key": "base_url",
