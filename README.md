@@ -143,14 +143,22 @@ You should see:
 🚀 Insecure API running at http://localhost:3000
 ```
 
-### 5. Test the API with Postman
+### 5. Populate the Database with Sample Data (Optional)
+
+To seed the MongoDB database with example users and packages:
+
+```bash
+node scripts/seed.js
+```
+
+### 6. Test the API with Postman
 
 Import the following collection into Postman:
 * `InsecureShip API.postman_collection.json`
 
 This collection contains pre-configured requests to demonstrate each vulnerability.
 
-### 6. Scan the Code for Known Vulnerabilities
+### 7. Scan the Code for Known Vulnerabilities
 
 You can use the included demo vulnerability scanner (`scripts/vulnchecker.js`) to detect insecure patterns.
 
@@ -160,7 +168,7 @@ npm run vulncheck
 
 ⚠️ This scanner is **for educational purposes only**. It simulates basic static analysis with regex. It is **not a real security tool**.
 
-### 7. Optional: Secure Version
+### 8. Optional: Secure Version
 
 You can compare insecure and secure implementations to understand how to mitigate each issue. Look for clearly labeled corrected versions inside each route.
 
