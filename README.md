@@ -31,6 +31,17 @@ InsecureShip is designed as a simple tool to:
 
 This application contains intentional security vulnerabilities and should never be deployed in production environments or exposed to the internet. Use only in controlled, isolated environments for security training, demonstrations, and testing.
 
+## Writeup Walkthrough & Resolution
+
+**File:** [`Walkthrough - Writeup.md`](./Walkthrough%20-%20Writeup.md)
+
+The following analysis presents a **possible approach** to **identifying and mitigating** certain **vulnerabilities** observed in the application.  
+It should **not** be interpreted as a **definitive guide** or an **official security recommendation**.  
+Rather, it is intended as an **educational example** to encourage **reflection** on potential **mitigation strategies**.
+
+It is important to note that **additional vulnerabilities** may exist beyond those discussed here, and that **other mitigation methods** not covered in this document may also be applicable.
+
+
 ## Technologies
 
 - Node.js + Express
