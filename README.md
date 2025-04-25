@@ -46,11 +46,6 @@ It is important to note that **additional vulnerabilities** may exist beyond tho
 
 - Node.js + Express
 - MongoDB (without authentication, in Docker)
-- JWT (poorly implemented)
-- Axios, child_process
-- Permissive CORS
-- No input sanitization
-- No security headers
 
 ---
 
