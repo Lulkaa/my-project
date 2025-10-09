@@ -1,64 +1,79 @@
+# 🧭 Workflow name — this is what you’ll see under the "Actions" tab on GitHub
 name: Snyk Open Source & Code (manual)
 
+# 🚀 Trigger — this workflow runs manually via the "Run workflow" button in GitHub
 on:
   workflow_dispatch: {}
 
+# 🔐 Permissions granted to this workflow
 permissions:
-  contents: read
-  security-events: write
+  contents: read              # allows reading repository contents
+  security-events: write      # allows uploading SARIF results to GitHub Security (Code Scanning)
 
 jobs:
+  # 🧱 The main job for scanning with Snyk
   snyk-scan:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest    # runs the workflow on a Linux (Ubuntu) runner
 
     steps:
+      # 1️⃣ Checkout the repository code into the workflow environment
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 2️⃣ Set up Node.js environment (version 20) and cache npm dependencies for faster builds
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: '20'  # Node.js version to use
+          cache: 'npm'        # enables npm caching between runs
 
+      # 3️⃣ Install all project dependencies from package-lock.json (clean install)
       - name: Install dependencies
         run: npm ci
 
-      # ---------- Install & auth Snyk ----------
+      # ---------- Install & authenticate Snyk ----------
+      # 4️⃣ Install the Snyk CLI globally
       - name: Install Snyk CLI
         run: npm install -g snyk
 
+      # 5️⃣ Authenticate with Snyk using your API token stored in GitHub Secrets
       - name: Authenticate Snyk
         env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}   # stored in GitHub repo Settings → Secrets
         run: snyk auth "$SNYK_TOKEN"
 
-      # ---------- Snyk Open Source ----------
+      # ---------- Snyk Open Source (Dependency scan) ----------
+      # 6️⃣ Scan all dependency files (package.json, requirements.txt, etc.)
       - name: Run Snyk Open Source test → SARIF
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        # keep the job green even if vulns are found
         run: snyk test --all-projects --sarif-file-output=snyk-os.sarif || true
+        # --all-projects      → scan all supported manifest files in the repo
+        # --sarif-file-output → export results to snyk-os.sarif
+        # || true             → ensures the workflow doesn't fail even if vulnerabilities are found
 
+      # 7️⃣ Upload Snyk Open Source SARIF results to GitHub Security tab
       - name: Upload Snyk Open Source SARIF to GitHub
-        if: ${{ hashFiles('snyk-os.sarif') != '' }}
+        if: ${{ hashFiles('snyk-os.sarif') != '' }}   # run only if SARIF file exists
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: snyk-os.sarif
-          category: snyk-open-source
+          sarif_file: snyk-os.sarif                    # path to SARIF file
+          category: snyk-open-source                   # label category for this scan
 
-      # ---------- Snyk Code ----------
+      # ---------- Snyk Code (Static code analysis) ----------
+      # 8️⃣ Run Snyk Code analysis (SAST) — scans your actual source code
       - name: Run Snyk Code test → SARIF
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        # IMPORTANT: write straight to file; do NOT use stdout redirection
         run: snyk code test --sarif-file-output=snyk-code.sarif || true
+        # --sarif-file-output → export Snyk Code findings to snyk-code.sarif
+        # || true             → keeps workflow green even if issues are found
+        # ⚠️ Works only if "Snyk Code" is enabled for your Snyk organization
 
+      # 9️⃣ Upload Snyk Code SARIF report to GitHub Security
       - name: Upload Snyk Code SARIF to GitHub
-        if: ${{ hashFiles('snyk-code.sarif') != '' }}
+        if: ${{ hashFiles('snyk-code.sarif') != '' }}  # run only if SARIF file exists
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: snyk-code.sarif
-          category: snyk-code
-
-
+          sarif_file: snyk-code.sarif                   # path to SARIF file
+          category: snyk-code                           # label category for Snyk Code scan
