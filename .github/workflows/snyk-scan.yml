@@ -24,7 +24,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # ---------- Встановлення та авторизація Snyk ----------
+      # ---------- Install & auth Snyk ----------
       - name: Install Snyk CLI
         run: npm install -g snyk
 
@@ -37,6 +37,7 @@ jobs:
       - name: Run Snyk Open Source test → SARIF
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        # keep the job green even if vulns are found
         run: snyk test --all-projects --sarif-file-output=snyk-os.sarif || true
 
       - name: Upload Snyk Open Source SARIF to GitHub
@@ -50,7 +51,8 @@ jobs:
       - name: Run Snyk Code test → SARIF
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        run: snyk code test --sarif > snyk-code.sarif || true
+        # IMPORTANT: write straight to file; do NOT use stdout redirection
+        run: snyk code test --sarif-file-output=snyk-code.sarif || true
 
       - name: Upload Snyk Code SARIF to GitHub
         if: ${{ hashFiles('snyk-code.sarif') != '' }}
@@ -58,4 +60,5 @@ jobs:
         with:
           sarif_file: snyk-code.sarif
           category: snyk-code
+
 
