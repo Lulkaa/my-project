@@ -47,7 +47,7 @@ jobs:
       - name: Run Snyk Open Source test → SARIF
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        run: snyk test  --sarif-file-output=snyk-os.sarif || true
+        run: snyk test  --sarif-file-output=snyk-os.sarif  --json-file-output=snyk-os.json || true
         # --sarif-file-output → export results to snyk-os.sarif
         # || true             → ensures the workflow doesn't fail even if vulnerabilities are found
 
@@ -57,7 +57,12 @@ jobs:
         with:
           sarif_file: snyk-os.sarif                    # path to SARIF file
           category: snyk-open-source                   # label category for this scan
+     
+      #Output to .json file 
+      - name: Results in .json
+        run: cat snyk-os.json
 
+      
       # ---------- Snyk Code (Static code analysis) ----------
       # 8️⃣ Run Snyk Code analysis (SAST) — scans your actual source code
       - name: Run Snyk Code test → SARIF
