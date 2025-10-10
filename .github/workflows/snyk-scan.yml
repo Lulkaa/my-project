@@ -44,10 +44,11 @@ jobs:
 
       # ---------- Snyk Open Source (Dependency scan) ----------
       # 6️⃣ Scan all dependency files (package.json, requirements.txt, etc.)
-      - name: Run Snyk Open Source test → SARIF
+      - name: Run Snyk Open Source test (Console results)
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        run: snyk test  --sarif-file-output=snyk-os.sarif  --json-file-output=snyk-os.json || true
+        run: snyk test   --sarif-file-output=snyk-os.sarif  --json-file-output=snyk-os.json | tee snyk-results.txt || true
+        
         # --sarif-file-output → export results to snyk-os.sarif
         # || true             → ensures the workflow doesn't fail even if vulnerabilities are found
 
@@ -61,7 +62,9 @@ jobs:
       #Output to .json file 
       - name: Results in .json
         run: cat snyk-os.json
-
+      #Output to .txt
+      - name: Results in .txt
+        run: cat snyk-results.txt
       
       # ---------- Snyk Code (Static code analysis) ----------
       # 8️⃣ Run Snyk Code analysis (SAST) — scans your actual source code
