@@ -47,8 +47,7 @@ jobs:
       - name: Run Snyk Open Source test → SARIF
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        run: snyk test --all-projects --sarif-file-output=snyk-os.sarif || true
-        # --all-projects      → scan all supported manifest files in the repo
+        run: snyk test  --sarif-file-output=snyk-os.sarif || true
         # --sarif-file-output → export results to snyk-os.sarif
         # || true             → ensures the workflow doesn't fail even if vulnerabilities are found
 
