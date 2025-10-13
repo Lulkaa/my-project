@@ -11,7 +11,8 @@ on:
 permissions:
   contents: read              # allows reading repository contents
   security-events: write      # allows uploading SARIF results to GitHub Security (Code Scanning)
-
+  pull-requests: write
+   
 jobs:
   # 🧱 The main job for scanning with Snyk
   snyk-scan:
@@ -114,21 +115,17 @@ jobs:
             snyk-code.json
           
 
-         # ---------- Comment to PR ----------
       - name: Comment to PR with artifact link
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false }}
         uses: actions/github-script@v7
         with:
           script: |
             const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
-
-            const body = `
-            📎 [Download Snyk TXT & JSON report here](${runUrl})  
-            (Artifacts are available at the bottom of that page.)
-             `;
+            const body = `📎 [Download Snyk TXT & JSON report here](${runUrl})\n(Artifacts are available at the bottom of that page.)`;
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
               body
             });
+
