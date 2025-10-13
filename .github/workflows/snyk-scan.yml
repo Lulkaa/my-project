@@ -97,7 +97,7 @@ jobs:
       
        #Output to .json file 
       - name: Results in .json
-        run: cat snyk-сode.json
+        run: cat snyk-code.json
       #Output to .txt
       - name: Results in .txt
         run: cat snyk-code.txt
