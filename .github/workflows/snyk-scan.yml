@@ -3,6 +3,8 @@ name: Snyk Open Source & Code (manual)
 
 # 🚀 Trigger — this workflow runs manually via the "Run workflow" button in GitHub
 on:
+  pull_request:
+    branches: [ "main", "master" ]
   workflow_dispatch: {}
 
 # 🔐 Permissions granted to this workflow
@@ -112,4 +114,21 @@ jobs:
             snyk-code.json
           
 
-    
+         # ---------- Comment to PR ----------
+      - name: Comment to PR with artifact link
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+
+            const body = `
+            📎 [Download Snyk TXT & JSON report here](${runUrl})  
+            (Artifacts are available at the bottom of that page.)
+             `;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body
+            });
