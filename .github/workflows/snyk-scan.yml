@@ -47,7 +47,7 @@ jobs:
       - name: Run Snyk Open Source test (Console results)
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        run: snyk test   --sarif-file-output=snyk-os.sarif  --json-file-output=snyk-os.json | tee snyk-results.txt || true
+        run: snyk test   --sarif-file-output=snyk-os.sarif  --json-file-output=snyk-os.json | tee snyk-os.txt || true
         
         # --sarif-file-output → export results to snyk-os.sarif
         # || true             → ensures the workflow doesn't fail even if vulnerabilities are found
@@ -64,14 +64,25 @@ jobs:
         run: cat snyk-os.json
       #Output to .txt
       - name: Results in .txt
-        run: cat snyk-results.txt
-      
+        run: cat snyk-os.txt
+
+
+      - name: Publish Open Source artifacts (txt/json/sarif)
+        uses: actions/upload-artifact@v4
+        with:
+          name: snyk-open-source-reports
+          path: |
+            snyk-os.txt
+            snyk-os.json
+        
+
+            
       # ---------- Snyk Code (Static code analysis) ----------
       # 8️⃣ Run Snyk Code analysis (SAST) — scans your actual source code
       - name: Run Snyk Code test → SARIF
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        run: snyk code test --sarif-file-output=snyk-code.sarif || true
+        run: snyk code test --sarif-file-output=snyk-code.sarif --json-file-output=snyk-code.json | tee snyk-code.txt || true
         # --sarif-file-output → export Snyk Code findings to snyk-code.sarif
         # || true             → keeps workflow green even if issues are found
         # ⚠️ Works only if "Snyk Code" is enabled for your Snyk organization
@@ -82,3 +93,23 @@ jobs:
         with:
           sarif_file: snyk-code.sarif                   # path to SARIF file
           category: snyk-code                           # label category for Snyk Code scan
+      
+      
+       #Output to .json file 
+      - name: Results in .json
+        run: cat snyk-сode.json
+      #Output to .txt
+      - name: Results in .txt
+        run: cat snyk-code.txt
+
+
+      - name: Publish Code artifacts (txt/json/sarif)
+        uses: actions/upload-artifact@v4
+        with:
+          name: snyk-code-reports
+          path: |
+            snyk-code.txt
+            snyk-code.json
+          
+
+    
