@@ -11,7 +11,7 @@ on:
 permissions:
   contents: read              # allows reading repository contents
   security-events: write      # allows uploading SARIF results to GitHub Security (Code Scanning)
-
+  pull-requests: write
 jobs:
   # 🧱 The main job for scanning with Snyk
   snyk-scan:
