@@ -219,3 +219,4 @@ This project was inspired and enriched by the work of the following open-source 
   Official resource: [owasp.org/www-project-api-security](https://owasp.org/www-project-api-security/) – The foundation for understanding and mitigating API-specific risks.
 
 > ⚠️ We deeply appreciate the knowledge and tools shared by these communities. This project builds upon their ideas to promote practical and ethical security education.
+Trigger Snyk workflow test.
