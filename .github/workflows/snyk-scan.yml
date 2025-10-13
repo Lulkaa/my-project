@@ -76,8 +76,6 @@ jobs:
           path: |
             snyk-os.txt
             snyk-os.json
-        
-
             
       # ---------- Snyk Code (Static code analysis) ----------
       # 8️⃣ Run Snyk Code analysis (SAST) — scans your actual source code
