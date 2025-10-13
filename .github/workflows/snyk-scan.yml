@@ -21,7 +21,6 @@ jobs:
       # 1️⃣ Checkout the repository code into the workflow environment
       - name: Checkout
         uses: actions/checkout@v4
-
       # 2️⃣ Set up Node.js environment (version 20) and cache npm dependencies for faster builds
       - name: Set up Node
         uses: actions/setup-node@v4
