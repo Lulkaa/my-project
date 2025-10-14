@@ -16,7 +16,6 @@ jobs:
   # 🧱 The main job for scanning with Snyk
   snyk-scan:
     runs-on: ubuntu-latest    # runs the workflow on a Linux (Ubuntu) runner
-
     steps:
       # 1️⃣ Checkout the repository code into the workflow environment
       - name: Checkout
