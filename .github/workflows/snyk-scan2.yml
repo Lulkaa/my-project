@@ -16,7 +16,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
+        
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
@@ -52,8 +52,6 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            const core = require('@actions/core');
-
             const path = 'snyk-os.json';
 
             // Формуємо тіло коментаря
