@@ -43,6 +43,29 @@ jobs:
        run: snyk test  --json-file-output=snyk-os.json  || true
     
      - name: Find Critical/High/Moderate issues 
-     
+       uses: actions/github-script@v7
+       with:
+          script: |
+            const fs = require('fs');   // Node.js file system module
+            const path = 'snyk-os.json';
+            const txt = fs.existsSync(path)
+              ? fs.readFileSync(path, 'utf8')
+              : '';
+            const rx = /\b(critical|high|medium)\b/gi;
+            const matches = [...txt.matchAll(rx)].map(m => m[0].toLowerCase());
+
+            if (matches.length > 0) {
+              // Post a single concise comment to the pull request
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body: bodyIfFound(matches)
+              });
+
+               core.setFailed('critical/high/medium vulnerabilities found in Snyk report');
+              } else {
+              ('No critical/high/medium severities found in Snyk report.');
+            }
        
        
