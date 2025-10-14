@@ -1,1 +1,9 @@
+name: Snyk: Extra task 
 
+on: 
+pull_request: 
+branches: [ "main", "master" ] 
+workflow_dispatch: {}
+
+permissions: 
+contents: read # allows reading repository contents 
