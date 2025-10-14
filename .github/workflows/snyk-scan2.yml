@@ -51,8 +51,6 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            const core = require('@actions/core');
-
             const path = 'snyk-os.json';
 
             // Формуємо тіло коментаря
