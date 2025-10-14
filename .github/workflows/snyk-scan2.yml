@@ -1,9 +1,48 @@
-name: Snyk: Extra task 
+name: Snyk (Extra task) 
 
 on: 
-pull_request: 
-branches: [ "main", "master" ] 
-workflow_dispatch: {}
+   pull_request: 
+     branches: [ "main", "master" ] 
+   workflow_dispatch: {}
 
 permissions: 
-contents: read # allows reading repository contents 
+   contents: read # allows reading repository contents 
+   pull-requests: write
+
+jobs:
+  snyk-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+     - name: Checkout 
+       uses: actions/checkout@v4 
+       
+     - name: Set up Node
+       uses: actions/setup-node@v4
+       with:
+          node-version: '20'  # Node.js version to use
+          cache: 'npm'  
+
+      # 3️⃣ Install all project dependencies from package-lock.json (clean install)
+     - name: Install dependencies
+       run: npm ci
+
+      # ---------- Install & authenticate Snyk ----------
+      # 4️⃣ Install the Snyk CLI globally
+     - name: Install Snyk CLI
+       run: npm install -g snyk
+
+      # 5️⃣ Authenticate with Snyk using your API token stored in GitHub Secrets
+     - name: Authenticate Snyk
+       env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}   # stored in GitHub repo Settings → Secrets
+       run: snyk auth "$SNYK_TOKEN"
+     - name: Run Snyk Open Source test (Console results)
+       env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+       run: snyk test  --json-file-output=snyk-os.json  || true
+    
+     - name: Find Critical/High/Moderate issues 
+     
+       
+       
