@@ -48,6 +48,16 @@ jobs:
           script: |
             const fs = require('fs');   // Node.js file system module
             const path = 'snyk-os.json';
+            const bodyIfFound = (matches) => [
+             '🚨 **Snyk findings detected**',
+             '',
+             'The Snyk report for this PR contains at least one of: **critical**, **high**, or **medium**.',
+             '',
+             'Matched terms:',
+             '```\n' + matches.join(', ') + '\n```',
+             '',
+             'This workflow is marked as **failed** as requested.'
+              ].join('\n');
             const txt = fs.existsSync(path)
               ? fs.readFileSync(path, 'utf8')
               : '';
