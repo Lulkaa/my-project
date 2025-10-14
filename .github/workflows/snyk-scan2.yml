@@ -1,80 +1,99 @@
-name: Snyk (Extra task) 
+name: Snyk (Extra task)
 
-on: 
-   pull_request: 
-     branches: [ "main", "master" ] 
-   workflow_dispatch: {}
+on:
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch: {}
 
-permissions: 
-   contents: read # allows reading repository contents 
-   pull-requests: write
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
   snyk-scan:
     runs-on: ubuntu-latest
-    
+
     steps:
-     - name: Checkout 
-       uses: actions/checkout@v4 
-       
-     - name: Set up Node
-       uses: actions/setup-node@v4
-       with:
-          node-version: '20'  # Node.js version to use
-          cache: 'npm'  
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      # 3️⃣ Install all project dependencies from package-lock.json (clean install)
-     - name: Install dependencies
-       run: npm ci
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
 
-      # ---------- Install & authenticate Snyk ----------
-      # 4️⃣ Install the Snyk CLI globally
-     - name: Install Snyk CLI
-       run: npm install -g snyk
+      - name: Install dependencies
+        run: npm ci
 
-      # 5️⃣ Authenticate with Snyk using your API token stored in GitHub Secrets
-     - name: Authenticate Snyk
-       env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}   # stored in GitHub repo Settings → Secrets
-       run: snyk auth "$SNYK_TOKEN"
-     - name: Run Snyk Open Source test (Console results)
-       env:
+      # Install & auth Snyk
+      - name: Install Snyk CLI
+        run: npm install -g snyk
+
+      - name: Authenticate Snyk
+        env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-       run: snyk test  --json-file-output=snyk-os.json  || true
-    
-     - name: Find Critical/High/Moderate issues 
-       uses: actions/github-script@v7
-       with:
+        run: snyk auth "$SNYK_TOKEN"
+
+      # Звіт Snyk OSS (у JSON)
+      - name: Run Snyk Open Source test (JSON report)
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk test --json-file-output=snyk-os.json || true
+
+      # Гарантуємо, що файл існує (щоб не впасти на читанні)
+      - name: Ensure report exists
+        run: '[ -f snyk-os.json ] || echo "{}" > snyk-os.json'
+
+      # Пошук critical/high/medium → коментуємо PR і валимо workflow
+      - name: Find Critical/High/Medium issues and fail
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const fs = require('fs');   // Node.js file system module
+            const fs = require('fs');
+            const core = require('@actions/core');
+
             const path = 'snyk-os.json';
-            const bodyIfFound = (matches) => [
-             '🚨 **Snyk findings detected**',
-             '',
-             'The Snyk report for this PR contains at least one of: **critical**, **high**, or **medium**.',
-             '',
-             'Matched terms:',
-             '```\n' + matches.join(', ') + '\n```',
-             '',
-             'This workflow is marked as **failed** as requested.'
+
+            // Формуємо тіло коментаря
+            const bodyIfFound = (matches) => {
+              // унікальні збіги для стислості
+              const uniq = [...new Set(matches.map(m => m.toLowerCase()))];
+              return [
+                '🚨 **Snyk findings detected**',
+                '',
+                'The Snyk report for this PR contains at least one of: **critical**, **high**, or **medium**.',
+                '',
+                'Matched terms:',
+                '```\n' + uniq.join(', ') + '\n```',
+                '',
+                'This workflow is marked as **failed** as requested.'
               ].join('\n');
-            const txt = fs.existsSync(path)
-              ? fs.readFileSync(path, 'utf8')
-              : '';
+            };
+
+            // Читаємо текст звіту
+            const txt = fs.existsSync(path) ? fs.readFileSync(path, 'utf8') : '';
+
+            // Шукаємо слова critical/high/medium (повні слова, без регістру)
             const rx = /\b(critical|high|medium)\b/gi;
-            const matches = [...txt.matchAll(rx)].map(m => m[0].toLowerCase());
+            const matches = [...txt.matchAll(rx)].map(m => m[0]);
+
             if (matches.length > 0) {
-              // Post a single concise comment to the pull request
+              // Коментуємо у PR
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.payload.pull_request.number,
                 body: bodyIfFound(matches)
               });
-               core.setFailed('critical/high/medium vulnerabilities found in Snyk report');
-              } else {
-              ('No critical/high/medium severities found in Snyk report.');
+
+              // Валимо job/workflow
+              core.setFailed('critical/high/medium vulnerabilities found in Snyk report');
+            } else {
+              core.info('✅ No critical/high/medium severities found in Snyk report.');
             }
+
      
        
        
