@@ -26,7 +26,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Install & auth Snyk
       - name: Install Snyk CLI
         run: npm install -g snyk
 
@@ -35,62 +34,114 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: snyk auth "$SNYK_TOKEN"
 
-      # Звіт Snyk OSS (у JSON)
       - name: Run Snyk Open Source test (JSON report)
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: snyk test --json-file-output=snyk-os.json || true
 
-      # Гарантуємо, що файл існує (щоб не впасти на читанні)
       - name: Ensure report exists
         run: '[ -f snyk-os.json ] || echo "{}" > snyk-os.json'
 
-      # Пошук critical/high/medium → коментуємо PR і валимо workflow
-      - name: Find Critical/High/Medium issues and fail
+      # ✅ ЛИШЕ ПЕРША знайдена critical/high/medium → один коментар у PR
+      - name: Comment PR on first Critical/High/Medium issue and fail
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            const path = 'snyk-os.json';
+            const core = require('@actions/core');
 
-            // Формуємо тіло коментаря
-            const bodyIfFound = (matches) => {
-              // унікальні збіги для стислості
-              const uniq = [...new Set(matches.map(m => m.toLowerCase()))];
-              return [
-                '🚨 **Snyk findings detected**',
-                '',
-                'The Snyk report for this PR contains at least one of: **critical**, **high**, or **medium**.',
-                '',
-                'Matched terms:',
-                '```\n' + uniq.join(', ') + '\n```',
-                '',
-                'This workflow is marked as **failed** as requested.'
-              ].join('\n');
+            const path = 'snyk-os.json';
+            if (!fs.existsSync(path)) {
+              core.info('No snyk-os.json found. Skipping.');
+              return;
+            }
+
+            const raw = fs.readFileSync(path, 'utf8') || '{}';
+
+            // Helpers
+            const toArray = (x) => Array.isArray(x) ? x : (x ? [x] : []);
+            const sevWanted = new Set(['critical','high','medium']);
+
+            let parsed;
+            try { parsed = JSON.parse(raw); } catch { parsed = null; }
+
+            // Знайдемо першу вразливість по ПОРЯДКУ у звіті
+            let first = null;
+
+            const considerList = (list) => {
+              if (!Array.isArray(list)) return;
+              for (const v of list) {
+                const sev = String(v?.severity || '').toLowerCase();
+                if (sevWanted.has(sev)) { first = v; return true; }
+              }
+              return false;
             };
 
-            // Читаємо текст звіту
-            const txt = fs.existsSync(path) ? fs.readFileSync(path, 'utf8') : '';
+            if (parsed) {
+              if (Array.isArray(parsed)) {
+                // multi-target формат — проходимо по черзі
+                for (const item of parsed) {
+                  if (considerList(item?.vulnerabilities)) break;
+                }
+              } else {
+                considerList(parsed?.vulnerabilities);
+              }
+            }
 
-            // Шукаємо слова critical/high/medium (повні слова, без регістру)
-            const rx = /\b(critical|high|medium)\b/gi;
-            const matches = [...txt.matchAll(rx)].map(m => m[0]);
+            // Fallback: якщо структура невідома — просто шукаємо перше входження у сирому JSON
+            if (!first) {
+              const m = raw.match(/\b(critical|high|medium)\b/i);
+              if (m) {
+                first = {
+                  severity: m[0].toLowerCase(),
+                  title: 'A vulnerability with this severity was detected (raw scan)',
+                };
+              }
+            }
 
-            if (matches.length > 0) {
-              // Коментуємо у PR
+            if (!first) {
+              core.info('✅ No critical/high/medium severities found in Snyk report.');
+              return;
+            }
+
+            // Формуємо короткий, але інформативний коментар тільки про ПЕРШУ знайдену
+            const pkg = first.packageName || first.pkgName || '';
+            const version = first.version || '';
+            const title = first.title || first.id || 'Unknown issue';
+            const sev = String(first.severity || '').toUpperCase();
+            const cves = toArray(first.identifiers?.CVE).slice(0,5).join(', ');
+            const cvss = (typeof first.cvssScore === 'number') ? first.cvssScore : '';
+            const pathChain = toArray(first.from).join(' → ').slice(0,500);
+            const url = first.url || first.snykUrl || '';
+
+            const lines = [
+              `🚨 **Snyk: first detected ${sev} vulnerability**`,
+              '',
+              `**Title:** ${title}`,
+              pkg ? `**Package:** \`${pkg}\`` : null,
+              version ? `**Version:** \`${version}\`` : null,
+              `**Severity:** ${sev}`,
+              cves ? `**CVE:** ${cves}` : null,
+              cvss !== '' ? `**CVSS:** ${cvss}` : null,
+              pathChain ? `**Path:** ${pathChain}` : null,
+              url ? `**More:** ${url}` : null,
+              '',
+              '_This job is marked as **failed** to block merge until addressed._'
+            ].filter(Boolean);
+
+            if (context.payload.pull_request) {
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.payload.pull_request.number,
-                body: bodyIfFound(matches)
+                body: lines.join('\n')
               });
-
-              // Валимо job/workflow
-              core.setFailed('critical/high/medium vulnerabilities found in Snyk report');
             } else {
-              core.info('✅ No critical/high/medium severities found in Snyk report.');
+              core.warning('No PR context, skipping comment.');
             }
+
+            core.setFailed('Snyk found a Critical/High/Medium vulnerability (first occurrence only).')
 
      
        
