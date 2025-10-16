@@ -42,60 +42,80 @@ jobs:
       - name: Ensure report exists
         run: '[ -f snyk-os.json ] || echo "{}" > snyk-os.json'
 
-       # ---- Bash: парсимо репорт і коментуємо PR, якщо знайдено вразливості ----
       - name: Comment PR with Snyk vulnerabilities (bash)
         if: ${{ github.event_name == 'pull_request' }}
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           API_URL: ${{ github.api_url }}
         run: |
           set -euo pipefail
+          json="snyk-os.json"
 
-          # Bash-функція: формує контент коментаря за snyk-os.json
-          build_comment_body() {
-            local json="snyk-os.json"
+          [ -s "$json" ] || { echo "snyk-os.json missing/empty"; exit 0; }
 
-            # якщо у файлі немає масиву vulnerabilities — повертаємо порожньо
-            if ! jq -e '.vulnerabilities' "$json" >/dev/null 2>&1; then
-              return 0
-            fi
-
-            # Формуємо рядки для критичних/високих/середніх
+          # Повертає ПЕРШУ (за пріоритетом: critical > high > medium) вразливість з vulnerabilities[] або remediation.unresolved[]
+          pick_first_vuln() {
             jq -r '
-              .vulnerabilities[]
-              | select(.severity=="critical" or .severity=="high" or .severity=="medium")
-              | {
+              def sevnorm: ( .severityWithCritical // .severity // "unknown" ) | ascii_downcase;
+              def weight:
+                if sevnorm=="critical" then 3
+                elif sevnorm=="high" then 2
+                elif sevnorm=="medium" then 1
+                else 0 end;
+              def mk_url: ( .url // ( "https://security.snyk.io/vuln/" + ( .id // "" ) ) );
+              def mk_pkg: ( .packageName // .moduleName // .name // "unknown" );
+              def mk_ver: ( .version // "unknown" );
+
+              # звести дві колекції до спільної схеми
+              ( .vulnerabilities // [] ) as $v1
+              | ( .remediation.unresolved // [] ) as $v2
+              | ( $v1 + $v2 )
+              | map({
+                  id: (.id // ""),
                   title: (.title // "Unknown issue"),
-                  severity: ((.severity // "unknown") | ascii_upcase | sub("^."; (.[0:1] | ascii_upcase)) | sub("^UNKNOWN"; "Unknown")),  # капіталізація
-                  url: (.url // ("https://security.snyk.io/vuln/" + (.id // ""))),
-                  pkg: (.packageName // .name // "unknown"),
-                  ver: (.version // ( .from[0] // "" | capture(".*@(?<v>[^@]+)$").v? ) // "unknown"),
-                  intro: ((.from | first) // ((.packageName // .name // "unknown") + "@" + (.version // "unknown")))
-                }
-              | "✗ \(.title) [\(.severity) Severity][\(.url)] in \(.pkg)@\(.ver)\n    introduced by \(.intro)"
+                  severity: ( .severityWithCritical // .severity // "unknown" ),
+                  _sev: (sevnorm),
+                  _w: weight,
+                  url: mk_url,
+                  pkg: mk_pkg,
+                  ver: mk_ver,
+                  from: (.from // [])
+                })
+              | map(select(._w > 0))                          # залишаємо critical/high/medium
+              | sort_by(-._w)                                  # пріоритет: critical > high > medium
+              | first                                          # беремо першу
+              | if . == null then empty else . end
             ' "$json"
           }
 
-          # Збираємо рядки у змінну
-          VULNS_LINES="$(build_comment_body || true)"
+          VULN_JSON="$(pick_first_vuln || true)"
 
-          # Якщо нічого не знайшли — нічого не коментуємо
-          if [ -z "$VULNS_LINES" ]; then
-            echo "No critical/high/medium vulnerabilities found. Skipping PR comment."
+          if [ -z "$VULN_JSON" ]; then
+            echo "No critical/high/medium vulnerabilities found."
             exit 0
           fi
 
-          # Заголовок + список знайдених
-          BODY=$'We detected vulnerability in snyk scanning :\n'"$VULNS_LINES"
+          # Витягаємо поля
+          title="$(jq -r '.title' <<<"$VULN_JSON")"
+          sev_lc="$(jq -r '._sev' <<<"$VULN_JSON")"
+          # Робимо формат з великої літери ("medium" -> "Medium")
+          sev_cap="$(tr '[:lower:]' '[:upper:]' <<<"${sev_lc:0:1}")${sev_lc:1}"
+          url="$(jq -r '.url' <<<"$VULN_JSON")"
+          pkg="$(jq -r '.pkg' <<<"$VULN_JSON")"
+          ver="$(jq -r '.ver' <<<"$VULN_JSON")"
 
-          # Витягаємо номер PR з payload
+          # Спробуємо знайти в .from елемент саме для цього пакета; інакше fallback "pkg@ver"
+          intro="$(jq -r --arg pkg "$pkg" '
+            (.from // []) | map(select(test("^" + $pkg + "@"))) | last // empty
+          ' <<<"$VULN_JSON")"
+          [ -n "$intro" ] || intro="${pkg}@${ver}"
+
+          BODY=$'We detected vulnerability in snyk scanning :\n'"✗ ${title} [${sev_cap} Severity][${url}] in ${pkg}@${ver}\n    introduced by ${intro}"
+
           PR_NUMBER="$(jq -r '.pull_request.number' "$GITHUB_EVENT_PATH")"
-
-          # POST коментар у PR через GitHub REST API
           COMMENTS_URL="${API_URL}/repos/${REPO}/issues/${PR_NUMBER}/comments"
-
-          # Екрануємо перенос рядків у JSON
           BODY_JSON=$(jq -Rn --arg b "$BODY" '{body: $b}')
 
           curl -sS -X POST \
@@ -106,6 +126,7 @@ jobs:
             "${COMMENTS_URL}" >/dev/null
 
           echo "Comment posted to PR #${PR_NUMBER}."
+
      
        
        
