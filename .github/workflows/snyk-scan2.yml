@@ -42,107 +42,70 @@ jobs:
       - name: Ensure report exists
         run: '[ -f snyk-os.json ] || echo "{}" > snyk-os.json'
 
-      # ✅ ЛИШЕ ПЕРША знайдена critical/high/medium → один коментар у PR
-      - name: Comment PR on first Critical/High/Medium issue and fail
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs');
-            const core = require('@actions/core');
+       # ---- Bash: парсимо репорт і коментуємо PR, якщо знайдено вразливості ----
+      - name: Comment PR with Snyk vulnerabilities (bash)
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          API_URL: ${{ github.api_url }}
+        run: |
+          set -euo pipefail
 
-            const path = 'snyk-os.json';
-            if (!fs.existsSync(path)) {
-              core.info('No snyk-os.json found. Skipping.');
-              return;
-            }
+          # Bash-функція: формує контент коментаря за snyk-os.json
+          build_comment_body() {
+            local json="snyk-os.json"
 
-            const raw = fs.readFileSync(path, 'utf8') || '{}';
+            # якщо у файлі немає масиву vulnerabilities — повертаємо порожньо
+            if ! jq -e '.vulnerabilities' "$json" >/dev/null 2>&1; then
+              return 0
+            fi
 
-            // Helpers
-            const toArray = (x) => Array.isArray(x) ? x : (x ? [x] : []);
-            const sevWanted = new Set(['critical','high','medium']);
-
-            let parsed;
-            try { parsed = JSON.parse(raw); } catch { parsed = null; }
-
-            // Знайдемо першу вразливість по ПОРЯДКУ у звіті
-            let first = null;
-
-            const considerList = (list) => {
-              if (!Array.isArray(list)) return;
-              for (const v of list) {
-                const sev = String(v?.severity || '').toLowerCase();
-                if (sevWanted.has(sev)) { first = v; return true; }
-              }
-              return false;
-            };
-
-            if (parsed) {
-              if (Array.isArray(parsed)) {
-                // multi-target формат — проходимо по черзі
-                for (const item of parsed) {
-                  if (considerList(item?.vulnerabilities)) break;
+            # Формуємо рядки для критичних/високих/середніх
+            jq -r '
+              .vulnerabilities[]
+              | select(.severity=="critical" or .severity=="high" or .severity=="medium")
+              | {
+                  title: (.title // "Unknown issue"),
+                  severity: ((.severity // "unknown") | ascii_upcase | sub("^."; (.[0:1] | ascii_upcase)) | sub("^UNKNOWN"; "Unknown")),  # капіталізація
+                  url: (.url // ("https://security.snyk.io/vuln/" + (.id // ""))),
+                  pkg: (.packageName // .name // "unknown"),
+                  ver: (.version // ( .from[0] // "" | capture(".*@(?<v>[^@]+)$").v? ) // "unknown"),
+                  intro: ((.from | first) // ((.packageName // .name // "unknown") + "@" + (.version // "unknown")))
                 }
-              } else {
-                considerList(parsed?.vulnerabilities);
-              }
-            }
+              | "✗ \(.title) [\(.severity) Severity][\(.url)] in \(.pkg)@\(.ver)\n    introduced by \(.intro)"
+            ' "$json"
+          }
 
-            // Fallback: якщо структура невідома — просто шукаємо перше входження у сирому JSON
-            if (!first) {
-              const m = raw.match(/\b(critical|high|medium)\b/i);
-              if (m) {
-                first = {
-                  severity: m[0].toLowerCase(),
-                  title: 'A vulnerability with this severity was detected (raw scan)',
-                };
-              }
-            }
+          # Збираємо рядки у змінну
+          VULNS_LINES="$(build_comment_body || true)"
 
-            if (!first) {
-              core.info('✅ No critical/high/medium severities found in Snyk report.');
-              return;
-            }
+          # Якщо нічого не знайшли — нічого не коментуємо
+          if [ -z "$VULNS_LINES" ]; then
+            echo "No critical/high/medium vulnerabilities found. Skipping PR comment."
+            exit 0
+          fi
 
-            // Формуємо короткий, але інформативний коментар тільки про ПЕРШУ знайдену
-            const pkg = first.packageName || first.pkgName || '';
-            const version = first.version || '';
-            const title = first.title || first.id || 'Unknown issue';
-            const sev = String(first.severity || '').toUpperCase();
-            const cves = toArray(first.identifiers?.CVE).slice(0,5).join(', ');
-            const cvss = (typeof first.cvssScore === 'number') ? first.cvssScore : '';
-            const pathChain = toArray(first.from).join(' → ').slice(0,500);
-            const url = first.url || first.snykUrl || '';
+          # Заголовок + список знайдених
+          BODY=$'We detected vulnerability in snyk scanning :\n'"$VULNS_LINES"
 
-            const lines = [
-              `🚨 **Snyk: first detected ${sev} vulnerability**`,
-              '',
-              `**Title:** ${title}`,
-              pkg ? `**Package:** \`${pkg}\`` : null,
-              version ? `**Version:** \`${version}\`` : null,
-              `**Severity:** ${sev}`,
-              cves ? `**CVE:** ${cves}` : null,
-              cvss !== '' ? `**CVSS:** ${cvss}` : null,
-              pathChain ? `**Path:** ${pathChain}` : null,
-              url ? `**More:** ${url}` : null,
-              '',
-              '_This job is marked as **failed** to block merge until addressed._'
-            ].filter(Boolean);
+          # Витягаємо номер PR з payload
+          PR_NUMBER="$(jq -r '.pull_request.number' "$GITHUB_EVENT_PATH")"
 
-            if (context.payload.pull_request) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.payload.pull_request.number,
-                body: lines.join('\n')
-              });
-            } else {
-              core.warning('No PR context, skipping comment.');
-            }
+          # POST коментар у PR через GitHub REST API
+          COMMENTS_URL="${API_URL}/repos/${REPO}/issues/${PR_NUMBER}/comments"
 
-            core.setFailed('Snyk found a Critical/High/Medium vulnerability (first occurrence only).')
+          # Екрануємо перенос рядків у JSON
+          BODY_JSON=$(jq -Rn --arg b "$BODY" '{body: $b}')
 
+          curl -sS -X POST \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/json" \
+            --data "${BODY_JSON}" \
+            "${COMMENTS_URL}" >/dev/null
+
+          echo "Comment posted to PR #${PR_NUMBER}."
      
        
        
