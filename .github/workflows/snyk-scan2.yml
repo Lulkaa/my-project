@@ -8,6 +8,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  issues: write 
 
 jobs:
   snyk-scan:
@@ -46,7 +47,7 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}          # <-- надійне джерело токена
           REPO: ${{ github.repository }}
           API_URL: ${{ github.api_url }}
         run: |
@@ -79,26 +80,35 @@ jobs:
             ' "$json"
           }
 
-          # Збираємо текст коментаря
-          MAPFILE -t lines < <(build_comment_body || true)
+          BODY="$(build_comment_body || true)"
 
-          if [ "${#lines[@]}" -eq 0 ]; then
+          if [ -z "$BODY" ]; then
             echo "No critical/high/medium vulnerabilities found in .vulnerabilities[]."
             exit 0
           fi
-
-          BODY="$(printf "%s\n" "${lines[@]}")"
 
           PR_NUMBER="$(jq -r '.pull_request.number' "$GITHUB_EVENT_PATH")"
           COMMENTS_URL="${API_URL}/repos/${REPO}/issues/${PR_NUMBER}/comments"
           BODY_JSON=$(jq -Rn --arg b "$BODY" '{body: $b}')
 
-          curl -sS -X POST \
+          # Діагностика: покажемо HTTP-код і коротку відповідь
+          HTTP_CODE=$(mktemp)
+          RESP=$(curl -sS -w "%{http_code}" -o >(cat > /tmp/resp.json) \
+            -X POST \
             -H "Authorization: Bearer ${GITHUB_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
             -H "Content-Type: application/json" \
             --data "${BODY_JSON}" \
-            "${COMMENTS_URL}" >/dev/null
+            "${COMMENTS_URL}")
+
+          echo "GitHub API HTTP status: ${RESP}"
+          echo "GitHub API response body:"
+          cat /tmp/resp.json || true
+
+          if [ "$RESP" -lt 200 ] || [ "$RESP" -ge 300 ]; then
+            echo "Failed to post comment (HTTP ${RESP})."
+            exit 1
+          fi
 
           echo "Comment posted to PR #${PR_NUMBER}. Failing workflow as requested."
           exit 1
