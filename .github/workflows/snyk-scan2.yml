@@ -42,6 +42,7 @@ jobs:
       - name: Ensure report exists
         run: '[ -f snyk-os.json ] || echo "{}" > snyk-os.json'
 
+
        # ---- Bash: парсимо репорт і коментуємо PR, якщо знайдено вразливості ----
       - name: Comment PR with Snyk vulnerabilities (bash)
         if: ${{ github.event_name == 'pull_request' }}
