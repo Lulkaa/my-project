@@ -43,69 +43,75 @@ jobs:
       - name: Ensure report exists
         run: '[ -f snyk-os.json ] || echo "{}" > snyk-os.json'
 
-      - name: Comment PR with Snyk vulnerabilities (github-script)
+      - name: Comment PR with Snyk vulnerabilities (bash)
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs');
-            const core = require('@actions/core');
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}          # <-- надійне джерело токена
+          REPO: ${{ github.repository }}
+          API_URL: ${{ github.api_url }}
+        run: |
+          set -euo pipefail
+          json="snyk-os.json"
 
-            const path = 'snyk-os.json';
+          [ -s "$json" ] || { echo "snyk-os.json missing/empty"; exit 0; }
 
-            // 1) Якщо файл відсутній або порожній — виходимо без помилки
-            if (!fs.existsSync(path) || fs.statSync(path).size === 0) {
-              core.info('snyk-os.json missing/empty');
-              return;
-            }
+          build_comment_body() {
+            jq -r '
+              (.vulnerabilities // [])
+              | map(select(
+                  ( .severity // .severityWithCritical // "unknown" | ascii_downcase )
+                  | IN("critical","high","medium")
+                ))
+              | if length == 0 then empty else
+                  ( "We detected vulnerability in snyk scanning :" ),
+                  ( .[] |
+                    {
+                      title: (.title // "Unknown issue"),
+                      sev: ((.severity // .severityWithCritical // "unknown") | ascii_downcase),
+                      url: (.url // ("https://security.snyk.io/vuln/" + (.id // ""))),
+                      pkg: (.packageName // .moduleName // .name // "unknown"),
+                      ver: (.version // "unknown"),
+                      intro: ((.from | select(type=="array") | last) // ((.packageName // .moduleName // .name // "unknown") + "@" + (.version // "unknown")))
+                    }
+                    | "✗ \(.title) [\((.sev | .[0:1] | ascii_upcase) + (.sev | .[1:]) ) Severity][\(.url)] in \(.pkg)@\(.ver)\n    introduced by \(.intro)"
+                  )
+                end
+            ' "$json"
+          }
 
-            // 2) Читаємо JSON Snyk
-            const data = JSON.parse(fs.readFileSync(path, 'utf8'));
-            const all = Array.isArray(data.vulnerabilities) ? data.vulnerabilities : [];
+          BODY="$(build_comment_body || true)"
 
-            // 3) Фільтруємо critical/high/medium (беремо .severity або .severityWithCritical)
-            const sevOf = v => String((v.severity ?? v.severityWithCritical ?? 'unknown')).toLowerCase();
-            const interesting = all.filter(v => ['critical', 'high', 'medium'].includes(sevOf(v)));
+          if [ -z "$BODY" ]; then
+            echo "No critical/high/medium vulnerabilities found in .vulnerabilities[]."
+            exit 0
+          fi
 
-            if (interesting.length === 0) {
-              core.info('No critical/high/medium vulnerabilities found in .vulnerabilities[].');
-              return;
-            }
+          PR_NUMBER="$(jq -r '.pull_request.number' "$GITHUB_EVENT_PATH")"
+          COMMENTS_URL="${API_URL}/repos/${REPO}/issues/${PR_NUMBER}/comments"
+          BODY_JSON=$(jq -Rn --arg b "$BODY" '{body: $b}')
 
-            // 4) Формуємо тіло коментаря (еквівалент до jq-логіки)
-            const lines = ['We detected vulnerability in snyk scanning :'];
-            for (const v of interesting) {
-              const title = v.title ?? 'Unknown issue';
-              const sev = sevOf(v);
-              const sevCap = sev.charAt(0).toUpperCase() + sev.slice(1);
-              const url = v.url ?? (v.id ? `https://security.snyk.io/vuln/${v.id}` : 'https://security.snyk.io');
-              const pkg = v.packageName ?? v.moduleName ?? v.name ?? 'unknown';
-              const ver = v.version ?? 'unknown';
-              const fromArr = Array.isArray(v.from) ? v.from : null;
-              const intro = fromArr && fromArr.length ? fromArr[fromArr.length - 1] : `${pkg}@${ver}`;
-              lines.push(`✗ ${title} [${sevCap} Severity][${url}] in ${pkg}@${ver}\n    introduced by ${intro}`);
-            }
-            const body = lines.join('\n');
+          # Діагностика: покажемо HTTP-код і коротку відповідь
+          HTTP_CODE=$(mktemp)
+          RESP=$(curl -sS -w "%{http_code}" -o >(cat > /tmp/resp.json) \
+            -X POST \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/json" \
+            --data "${BODY_JSON}" \
+            "${COMMENTS_URL}")
 
-            // 5) Знаходимо номер PR і публікуємо коментар
-            const prNumber = context.payload?.pull_request?.number;
-            if (!prNumber) {
-              core.info('No pull_request context found. Skipping comment.');
-              return;
-            }
+          echo "GitHub API HTTP status: ${RESP}"
+          echo "GitHub API response body:"
+          cat /tmp/resp.json || true
 
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: prNumber,
-              body
-            });
+          if [ "$RESP" -lt 200 ] || [ "$RESP" -ge 300 ]; then
+            echo "Failed to post comment (HTTP ${RESP})."
+            exit 1
+          fi
 
-            core.info(`Comment posted to PR #${prNumber}. Failing workflow as requested.`);
-
-            // 6) Навмисно фейлимо крок/джобу
-            core.setFailed('Snyk vulnerabilities found.');
+          echo "Comment posted to PR #${PR_NUMBER}. Failing workflow as requested."
+          exit 1
 
 
 
