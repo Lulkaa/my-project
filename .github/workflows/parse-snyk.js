@@ -28,6 +28,7 @@ const mdRow = (v) => {
   return `- **${sev}** \`${pkg}${ver}\` — ${title} (${id}) \n ${depType} \n Upgrade to version: ${fix}`;
 };
 
+
 const header = hasIssues
   ? `### Snyk found ${vulns.length} vulnerabilities`
   : `### Snyk: no medium/high/critical vulnerabilities found`;
