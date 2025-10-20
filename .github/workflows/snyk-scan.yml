@@ -19,6 +19,7 @@
 #   - snyk-os.txt / snyk-code.txt     → Console-readable reports
 #   - A PR comment with 📎 link to the workflow run containing artifacts
 
+
 name: Snyk Open Source & Code
 
 on:
