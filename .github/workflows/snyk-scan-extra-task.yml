@@ -1,3 +1,16 @@
+# 📌 Purpose:
+#   This workflow automatically scans your project using Snyk
+#   and posts a detailed comment on the Pull Request (PR)
+#   with information about detected vulnerabilities.
+#
+# 🔍 What it does:
+#   • Detects vulnerabilities of severity: critical, high, and medium.
+#   • Determines whether each vulnerable dependency is:
+#       - Direct  → installed explicitly in your package.json
+#       - Transitive → installed indirectly through another package
+#   • Generates a Markdown report (comment.md) for posting into PR.
+#   • Fails the workflow if medium/high/critical vulnerabilities are found.
+
 name: Snyk (Extra task)
 
 on:
