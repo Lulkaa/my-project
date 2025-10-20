@@ -23,11 +23,8 @@ const mdRow = (v) => {
   const id = v.id;
   const title = v.title;
   const fix = Array.isArray(v.fixedIn) ? v.fixedIn.join(', ') : 'no fix listed';
-  let ref = '';
-  if (Array.isArray(v.references) && v.references[0]?.url) {
-    ref = ` [[ref]](${v.references[0].url})`;
-  }
-  return `- **${sev}** \`${pkg}${ver}\` — ${title} (${id})  \n Upgrade to version: ${fix}${ref}`;
+
+  return `- **${sev}** \`${pkg}${ver}\` — ${title} (${id})  \n Upgrade to version: ${fix}`;
 };
 
 const header = hasIssues
