@@ -107,6 +107,9 @@ jobs:
       #Output to .txt
       - name: Results in .txt
         run: cat snyk-code.txt
+        
+      - name: Results in .safir
+        run: cat snyk-code.sarif
 
       - name: Publish Code artifacts (txt/json/sarif)
         uses: actions/upload-artifact@v4
