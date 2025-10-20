@@ -4,7 +4,7 @@ name: Snyk Open Source & Code (manual)
 # 🚀 Trigger — this workflow runs manually via the "Run workflow" button in GitHub
 on:
   pull_request:
-    branches: [ "main", "master" ]
+    branches: [ "main" ]
   workflow_dispatch: {}
 
 # 🔐 Permissions granted to this workflow
@@ -76,8 +76,6 @@ jobs:
           path: |
             snyk-os.txt
             snyk-os.json
-        
-
             
       # ---------- Snyk Code (Static code analysis) ----------
       # 8️⃣ Run Snyk Code analysis (SAST) — scans your actual source code
@@ -85,9 +83,6 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: snyk code test --sarif-file-output=snyk-code.sarif --json-file-output=snyk-code.json | tee snyk-code.txt || true
-        # --sarif-file-output → export Snyk Code findings to snyk-code.sarif
-        # || true             → keeps workflow green even if issues are found
-        # ⚠️ Works only if "Snyk Code" is enabled for your Snyk organization
 
       # 9️⃣ Upload Snyk Code SARIF report to GitHub Security
       - name: Upload Snyk Code SARIF to GitHub
@@ -96,14 +91,12 @@ jobs:
           sarif_file: snyk-code.sarif                   # path to SARIF file
           category: snyk-code                           # label category for Snyk Code scan
       
-      
        #Output to .json file 
       - name: Results in .json
         run: cat snyk-code.json
       #Output to .txt
       - name: Results in .txt
         run: cat snyk-code.txt
-
 
       - name: Publish Code artifacts (txt/json/sarif)
         uses: actions/upload-artifact@v4
@@ -112,7 +105,6 @@ jobs:
           path: |
             snyk-code.txt
             snyk-code.json
-          
 
          # ---------- Comment to PR ----------
       - name: Comment to PR with artifact link
