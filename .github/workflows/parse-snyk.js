@@ -19,7 +19,7 @@ const hasIssues = vulns.length > 0;
 const mdRow = (v) => {
   const sev = String(v.severityWithCritical);
   const pkg = v.packageName;
-  const ver = @${v.version};
+  const ver = '@${v.version}';
   const id = v.id;
   const title = v.title;
   const fix = Array.isArray(v.fixedIn) ? v.fixedIn.join(', ') : 'no fix listed';
