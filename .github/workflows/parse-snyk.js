@@ -23,8 +23,9 @@ const mdRow = (v) => {
   const id = v.id;
   const title = v.title;
   const fix = Array.isArray(v.fixedIn) ? v.fixedIn.join(', ') : 'no fix listed';
-
-  return `- **${sev}** \`${pkg}${ver}\` — ${title} (${id})  \n Upgrade to version: ${fix}`;
+  const depType = Array.isArray(v.from) ? (v.from.length === 2 ? 'This is direct dependency' : 'This is transitive dependency ') : 'Unknown';
+  
+  return `- **${sev}** \`${pkg}${ver}\` — ${title} (${id}) \n ${depType} \n Upgrade to version: ${fix}`;
 };
 
 const header = hasIssues
