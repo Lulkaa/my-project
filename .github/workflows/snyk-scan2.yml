@@ -45,7 +45,6 @@ jobs:
 
       - name: Ensure report exists
         run: '[ -f snyk-os.json ] || echo "{}" > snyk-os.json'
-
       # -------- New: parse report & build PR comment ----------
       - name: Parse report & build PR comment
         id: parse
