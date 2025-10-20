@@ -1,6 +1,25 @@
+# 📌 Purpose:
+#   This workflow runs automated Snyk security scans for both:
+#     • Open Source dependencies (Snyk Open Source)
+#     • Application source code (Snyk Code)
+#   It helps detect and track vulnerabilities in dependencies and code
+#   during Pull Requests and manual runs.
+#
+# 🔍 What it does:
+#   • Installs and authenticates the Snyk CLI
+#   • Scans dependencies and source code for vulnerabilities
+#   • Generates reports in SARIF, JSON, and TXT formats
+#   • Uploads scan results to GitHub Security tab (SARIF)
+#   • Publishes TXT/JSON reports as build artifacts
+#   • Posts a comment on the Pull Request with a link to download reports
+#
+# 📄 Output:
+#   - snyk-os.json / snyk-code.json   → JSON reports with vulnerability data
+#   - snyk-os.sarif / snyk-code.sarif → Security scan results for GitHub
+#   - snyk-os.txt / snyk-code.txt     → Console-readable reports
+#   - A PR comment with 📎 link to the workflow run containing artifacts
 
 name: Snyk Open Source & Code
-
 
 on:
   pull_request:
