@@ -16,6 +16,7 @@ const vulns = vulnerabilities.filter(v =>
 
 const hasIssues = vulns.length > 0;
 
+
 const mdRow = (v) => {
   const sev = String(v.severityWithCritical);
   const pkg = v.packageName;
