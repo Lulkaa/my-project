@@ -1,11 +1,9 @@
   const fs = require('fs');
 
           const path = 'snyk-os.json';
-          let raw = '{}';
-          try { raw = fs.readFileSync(path, 'utf8'); } catch (e) {}
+          let raw = fs.readFileSync(path, 'utf8');
 
-          let parsed;
-          try { parsed = JSON.parse(raw); } catch (e) { parsed = {}; }
+          let parsed = JSON.parse(raw);
 
           // Snyk JSON might be a single object or an array (multi-project)
           const items = Array.isArray(parsed) ? parsed : [parsed];
