@@ -49,7 +49,7 @@ jobs:
       # -------- New: parse report & build PR comment ----------
       - name: Parse report & build PR comment
         id: parse
-        run: node parse-snyk.js
+        run: node .github/workflows/parse-snyk.js
       # -------- New: post the PR comment ----------
       - name: Post PR comment
         if: always()
