@@ -2,8 +2,7 @@ name: Snyk (Extra task)
 
 on:
   pull_request:
-    branches: ["main", "master"]
-    types: [opened, synchronize, reopened, ready_for_review]
+    branches: ["main"]
   workflow_dispatch: {}
 
 permissions:
