@@ -14,7 +14,6 @@
             const list = (it && Array.isArray(it.vulnerabilities)) ? it.vulnerabilities : [];
             allVulns.push(...list);
           }
-
           const wanted = new Set(['critical','high','medium']);
           const vulns = allVulns.filter(v => wanted.has(String(v.severityWithCritical || v.severity || '').toLowerCase()));
 
