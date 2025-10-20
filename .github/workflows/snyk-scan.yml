@@ -115,9 +115,8 @@ jobs:
             const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
 
             const body = `
-            📎 [Download Snyk TXT & JSON report here](${runUrl})  
-            (Artifacts are available at the bottom of that page.)
-             `;
+            📎 [Download Snyk TXT & JSON report here](${runUrl}) ` 
+            
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
