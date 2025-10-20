@@ -11,31 +11,30 @@ const vulnerabilities = Array.isArray(parsed.vulnerabilities)
 
 const wanted = new Set(['critical', 'high', 'medium']);
 const vulns = vulnerabilities.filter(v =>
-  wanted.has(String(v.severityWithCritical ))
+  wanted.has(String(v.severityWithCritical))
 );
 
 const hasIssues = vulns.length > 0;
 
 const mdRow = (v) => {
-  const sev = String(v.severityWithCritical || v.severity || '').toUpperCase();
-  const pkg = v.packageName || v.moduleName || v.name || 'unknown';
-  const ver = v.version ? `@${v.version}` : '';
-  const id = v.id || '';
-  const title = v.title || '';
-  const cves = v?.identifiers?.CVE?.length ? v.identifiers.CVE.join(', ') : '—';
-  const fix = Array.isArray(v.fixedIn) && v.fixedIn.length ? v.fixedIn.join(', ') : 'no fix listed';
+  const sev = String(v.severityWithCritical);
+  const pkg = v.packageName;
+  const ver = @${v.version};
+  const id = v.id;
+  const title = v.title;
+  const fix = Array.isArray(v.fixedIn) ? v.fixedIn.join(', ') : 'no fix listed';
   let ref = '';
   if (Array.isArray(v.references) && v.references[0]?.url) {
     ref = ` [[ref]](${v.references[0].url})`;
   }
-  return `- **${sev}** \`${pkg}${ver}\` — ${title} (${id})  \n  CVE(s): ${cves} • Fix: ${fix}${ref}`;
+  return `- **${sev}** \`${pkg}${ver}\` — ${title} (${id})  \n Fix: ${fix}${ref}`;
 };
 
 const header = hasIssues
   ? `### ❌ Snyk found ${vulns.length} vulnerabilities`
   : `### ✅ Snyk: no medium/high/critical vulnerabilities found`;
 
-const projectName = parsed.projectName || '—';
+const projectName = parsed.projectName ;
 
 const body = [
   header,
