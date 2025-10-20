@@ -16,6 +16,7 @@ const vulns = vulnerabilities.filter(v =>
 
 const hasIssues = vulns.length > 0;
 
+
 const mdRow = (v) => {
   const sev = String(v.severityWithCritical || v.severity || '').toUpperCase();
   const pkg = v.packageName || v.moduleName || v.name || 'unknown';
