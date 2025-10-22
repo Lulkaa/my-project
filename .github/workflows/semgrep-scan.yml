@@ -57,7 +57,7 @@ jobs:
              echo "__________________________"
              cat semgrep_scan_results.txt
              echo "__________________________"
-             can semgrep_scan_results.md
+             cat semgrep_scan_results.md
      
       - name: Comment Semgrep report
         uses: actions/github-script@v7
