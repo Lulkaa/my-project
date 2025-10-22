@@ -1,0 +1,20 @@
+rules:
+  - id: ssrf_rule
+    message: Possible SSRF
+    metadata:
+      cwe: "CWE-918: Server-Side Request Forgery (SSRF)"
+    languages:
+      - javascript
+    severity: HIGH
+    technology:
+      - express
+      - axios
+    patterns:
+      - pattern-inside: |
+          app.$METHOD($ROUTE, (..., $REQ, $RES, ...) => {
+            ...
+          })
+      - pattern: |
+          $V = req.query.url
+          ...
+          response = await axios.get($V)
