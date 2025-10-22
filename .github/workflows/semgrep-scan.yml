@@ -48,8 +48,7 @@ jobs:
              semgrep \
              --config "p/r2c-security-audit" \
              --config ".github/workflows/customRules/nosql-injection-rule.yaml" \
-             --output-format markdown \
-             --output semgrep_scan_results.md || true
+             --markdown --output semgrep_scan_results.md || true
       
       - name: Report output
         run: |
