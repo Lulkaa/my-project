@@ -81,7 +81,7 @@ jobs:
         run: cat snyk-os.txt
 
 
-      - name: Publish Open Source artifacts (txt/json/sarif)
+      - name: Publish Open Source artifacts (txt/json)
         uses: actions/upload-artifact@v4
         with:
           name: snyk-open-source-reports
@@ -111,7 +111,7 @@ jobs:
       - name: Results in .safir
         run: cat snyk-code.sarif
 
-      - name: Publish Code artifacts (txt/json/sarif)
+      - name: Publish Code artifacts (txt/json)
         uses: actions/upload-artifact@v4
         with:
           name: snyk-code-reports
