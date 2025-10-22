@@ -25,6 +25,12 @@ jobs:
         with:
           python-version: '3.x'
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' 
+          cache: 'npm'      
+          
       - name: Install Semgrep
         run: |
           python -m pip install --upgrade pip
@@ -33,31 +39,29 @@ jobs:
       - name: Run Semgrep scan (JSON / TXT / MD)
         shell: bash
         run: |
-         CONFIGS='--config p/r2c-security-audit --config .github/workflows/customRules/nosql-injection-rule.yaml'
-
-         # JSON
-         semgrep $CONFIGS --json --output semgrep_scan_results.json || true
-
-         # TXT (звичайний консольний формат у файл)
-         semgrep $CONFIGS --output semgrep_scan_results.txt || true
-
-         # Markdown
-         semgrep $CONFIGS --output-format markdown --output semgrep_scan_results.md || true
+          semgrep \
+             --config "p/r2c-security-audit"  \
+             --config "customRules/nosql-injection-rule.yaml" \
+             --json --output semgrep_scan_results.json || true 
+          
+           
+             semgrep \
+             --config "p/r2c-security-audit"  \
+             --config ".github/workflows/customRules/nosql-injection-rule.yaml" \
+             --text --output semgrep_scan_results.txt || true
       
-      - name: Report output
-        run: |
-             cat semgrep_scan_results.json
-             echo "__________________________"
-             cat semgrep_scan_results.txt
-             echo "__________________________"
-             cat semgrep_scan_results.md
-     
+      - name: Report output (json)
+        run: cat semgrep_scan_results.json
+
+      - name: Report output(txt)
+        run : cat semgrep_scan_results.txt
+        
       - name: Comment Semgrep report
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            const body = fs.readFileSync('semgrep_scan_results.md', 'utf8');
+            const body = fs.readFileSync('semgrep_scan_results.txt', 'utf8');
             await github.rest.issues.createComment({
             owner: context.repo.owner,
             repo: context.repo.repo,
