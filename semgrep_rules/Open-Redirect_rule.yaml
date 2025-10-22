@@ -1,0 +1,19 @@
+rules:
+  - id: Open-Redirect_rule
+    message: Possible open redirect
+    metadata:
+      cwe: CWE-601 URL Redirection to Untrusted Site (Open Redirect)
+      technology:
+        - flask
+    languages:
+      - python
+    severity: HIGH
+    patterns:
+      - pattern-inside: |-
+          @$APP.route(...)
+          def $X(...):
+            ...
+      - pattern: |
+          $V = request.args.get(...)
+          ...
+          return redirect($V)

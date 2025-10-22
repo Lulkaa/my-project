@@ -1,0 +1,14 @@
+rules:
+  - id: XML-External-Entity-Attack-rule
+    message: Possible XXE
+    languages:
+      - java
+    severity: HIGH
+    metadata:
+      cwe: "CWE-611: Improper Restriction of XML External Entity Reference"
+      technology: -java -spring -xml
+    patterns:
+      - pattern-either:
+          - pattern: $DBF = DocumentBuilderFactory.newInstance();
+          - pattern: $BUILDER = $DBF.newDocumentBuilder();
+          - pattern: $DOC = $BUILDER.parse(new InputSource(new StringReader($INPUT)));
