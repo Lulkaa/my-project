@@ -29,26 +29,19 @@ jobs:
           python -m pip install --upgrade pip
           pip install semgrep
 
-      - name: Run Semgrep scan
-        id: semgrep
+      - name: Run Semgrep scan (JSON / TXT / MD)
         shell: bash
-        run: | 
-             
-             semgrep \
-             --config "p/r2c-security-audit"  \
-             --config ".github/workflows/customRules/nosql-injection-rule.yaml" \
-             --json --output semgrep_scan_results.json || true 
-          
-           
-             semgrep \
-             --config "p/r2c-security-audit"  \
-             --config ".github/workflows/customRules/nosql-injection-rule.yaml" \
-             --text --output semgrep_scan_results.txt || true
-             
-             semgrep \
-             --config "p/r2c-security-audit" \
-             --config ".github/workflows/customRules/nosql-injection-rule.yaml" \
-             --markdown --output semgrep_scan_results.md || true
+        run: |
+         CONFIGS='--config p/r2c-security-audit --config .github/workflows/customRules/nosql-injection-rule.yaml'
+
+         # JSON
+         semgrep $CONFIGS --json --output semgrep_scan_results.json || true
+
+         # TXT (звичайний консольний формат у файл)
+         semgrep $CONFIGS --output semgrep_scan_results.txt || true
+
+         # Markdown
+         semgrep $CONFIGS --output-format markdown --output semgrep_scan_results.md || true
       
       - name: Report output
         run: |
