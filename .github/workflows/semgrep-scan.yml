@@ -41,7 +41,7 @@ jobs:
              
              semgrep \
              --config "p/r2c-security-audit"  \
-             --config "customRules/nosql-injection-rule.yaml" \
+             --config ".github/workflows/customRules/nosql-injection-rule.yaml" \
              --json --output semgrep_scan_results.json || true 
           
            
@@ -52,7 +52,7 @@ jobs:
              
              semgrep \
              --config "p/r2c-security-audit" \
-             --config "customRules/nosql-injection-rule.yaml" \
+             --config ".github/workflows/customRules/nosql-injection-rule.yaml" \
              --output-format markdown \
              --output semgrep_scan_results.md || true
       
