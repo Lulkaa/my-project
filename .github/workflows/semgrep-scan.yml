@@ -60,11 +60,11 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const report = fs.readFileSync('semgrep_scan_results.txt', 'utf8');
+            const report = fs.readFileSync('semgrep_scan_results.json', 'utf8');
             const body = [
               '### Semgrep Scan Report',
               '',
-              '```txt',
+              '```json',
               report,
               '```',
             ].join('\n');
