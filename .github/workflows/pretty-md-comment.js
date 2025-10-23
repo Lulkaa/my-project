@@ -1,49 +1,44 @@
 const fs = require('fs');
 
-const path = 'semgrep-scan-results.json';
+// читаємо файл з результатами semgrep
+const path = 'semgrep_scan_results.json';
 let raw = fs.readFileSync(path, 'utf8');
 let parsed = JSON.parse(raw);
 
+// безпечний доступ до масиву results
+const results = Array.isArray(parsed.results) ? parsed.results : [];
 
-const vulnerabilities = Array.isArray(parsed.vulnerabilities)
-  ? parsed.vulnerabilities
-  : [];
+const hasFindings = results.length > 0;
 
-const wanted = new Set(['critical', 'high', 'medium']);
-const vulns = vulnerabilities.filter(v =>
-  wanted.has(String(v.severityWithCritical))
-);
+// функція, яка формує markdown-рядок для кожного результату
+const mdRow = (r) => {
+  const file = r.path || '(unknown file)';
+  const start = r.start?.line ?? '?';
+  const end = r.end?.line ?? start;
+  const message = r.extra?.message || r.message || '(no message)';
+  const cweRaw = r.extra?.metadata?.cwe;
+  const cwe = Array.isArray(cweRaw)
+    ? cweRaw.join(', ')
+    : cweRaw || 'N/A';
 
-const hasIssues = vulns.length > 0;
-
-const mdRow = (v) => {
-  const sev = String(v.severityWithCritical);
-  const pkg = v.packageName;
-  const ver = v.version ? `@${v.version}` : '';
-  const id = v.id;
-  const title = v.title;
-  const fix = Array.isArray(v.fixedIn) ? v.fixedIn.join(', ') : 'no fix listed';
-  const depType = Array.isArray(v.from) ? (v.from.length === 2 ? 'This is direct dependency' : 'This is transitive dependency ') : 'Unknown';
-  
-  return `- **${sev.toUpperCase()}** \`${pkg}${ver}\` — ${title} (${id}) \n ${depType} \n Upgrade to version: ${fix}`;
+  return `- **File:** \`${file}\` (lines ${start}-${end})\n  - **Message:** ${message}\n  - **CWE:** ${cwe}`;
 };
 
-const header = hasIssues
-  ? `### Snyk found ${vulns.length} vulnerabilities`
-  : `### Snyk: no medium/high/critical vulnerabilities found`;
-
-const projectName = parsed.projectName ;
+// будуємо тіло markdown-коментаря
+const header = hasFindings
+  ? `### Semgrep found ${results.length} findings`
+  : `### Semgrep: no findings found`;
 
 const body = [
   header,
   '',
-  `**Project**: ${projectName}`,
-  hasIssues ? '\n**Details:**\n' : '',
-  hasIssues ? vulns.map(mdRow).join('\n') : '',
+  hasFindings ? '**Details:**' : '',
+  hasFindings ? results.map(mdRow).join('\n') : '',
   '',
 ].join('\n');
 
-fs.writeFileSync('comment.md', body);
+// записуємо у файл, який згодом додасться до PR
+fs.writeFileSync('pretty-comment.md', body);
 
-console.log(`has_issues=${hasIssues}`);
-fs.writeFileSync(process.env.GITHUB_OUTPUT , `has_issues=${hasIssues}\n`, { flag: 'a' });
+console.log(`has_findings=${hasFindings}`);
+fs.writeFileSync(process.env.GITHUB_OUTPUT, `has_findings=${hasFindings}\n`, { flag: 'a' });
