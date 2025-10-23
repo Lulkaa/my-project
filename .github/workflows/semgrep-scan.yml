@@ -62,7 +62,11 @@ jobs:
           path: |
             semgrep_scan_results.json
             semgrep_scan_results.txt
-      
+            
+      - name: Parse report & build PR comment
+        id: parse
+        run: node .github/workflows/pretty-md-comment.js
+        
       - name: Comment Semgrep report
         if: ${{ github.event_name == 'pull_request' }}
         uses: actions/github-script@v7
