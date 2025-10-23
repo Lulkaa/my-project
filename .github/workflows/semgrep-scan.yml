@@ -63,7 +63,7 @@ jobs:
             semgrep_scan_results.json
             semgrep_scan_results.txt
             
-      - name: Parse report & build PR comment
+      - name: Build PR comment
         id: parse
         run: node .github/workflows/pretty-md-comment.js
         
@@ -75,15 +75,10 @@ jobs:
             const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
             
             const fs = require('fs');
-            const report = fs.readFileSync('semgrep_scan_results.json', 'utf8');
+            const report = fs.readFileSync('pretty-comment.md', 'utf8');
             const body = [
             📎 [Download Semgrep TXT & JSON report here](${runUrl}) 
-              '### Semgrep Scan Report Results',
-              '',
-              '```txt',
-              report,
-              '```',
-            ].join('\n');
+            ]
             
             await github.rest.issues.createComment({
             owner: context.repo.owner,
