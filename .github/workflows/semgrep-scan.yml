@@ -61,10 +61,13 @@ jobs:
           script: |
             const fs = require('fs');
             const report = fs.readFileSync('semgrep_scan_results.txt', 'utf8');
-            const body = `### Semgrep scan report 
-             \`\`\`markdown
-             ${report}
-               \`\`\`
+            const body = [
+              '### Semgrep Scan Report',
+              '',
+              '```txt',
+              report,
+              '```',
+            ].join('\n');
             
             await github.rest.issues.createComment({
             owner: context.repo.owner,
