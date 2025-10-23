@@ -42,7 +42,6 @@ jobs:
              --config "p/r2c-security-audit"  \
              --config "semgrep_rules/nosql-injection-rule.yaml" \
              --json --output semgrep_scan_results.json || true 
-          
            
              semgrep \
              --config "p/r2c-security-audit"  \
