@@ -36,7 +36,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install semgrep
 
-      - name: Run Semgrep scan (JSON / TXT / MD)
+      - name: Run Semgrep scan (JSON / TXT )
         shell: bash
         run: |
           semgrep \
@@ -55,13 +55,18 @@ jobs:
 
       - name: Report output(txt)
         run : cat semgrep_scan_results.txt
-        
+      
       - name: Comment Semgrep report
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            const body = fs.readFileSync('semgrep_scan_results.txt', 'utf8');
+            const report = fs.readFileSync('semgrep_scan_results.txt', 'utf8');
+            const body = `### Semgrep scan report 
+             \`\`\`markdown
+             ${report}
+               \`\`\`
+            
             await github.rest.issues.createComment({
             owner: context.repo.owner,
             repo: context.repo.repo,
