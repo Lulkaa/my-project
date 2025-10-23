@@ -27,6 +27,7 @@ on:
   workflow_dispatch: {}
 
 
+
 permissions:
   contents: read              
   security-events: write   
