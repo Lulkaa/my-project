@@ -73,6 +73,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const fs = require('fs');
             const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
             const report = fs.readFileSync('pretty-comment.md', 'utf8');
             
@@ -88,8 +89,9 @@ jobs:
               issue_number: context.payload.pull_request.number,
               body
             });
-
-      
-          
-     
-             
+      # -------- New: fail job if issues present ----------
+      - name: Fail if issues present
+        if: steps.parse.outputs.has_issues == 'true'
+        run: |
+          echo "High/Medium/Critical vulnerabilities were found. Failing the job."
+          exit 1
