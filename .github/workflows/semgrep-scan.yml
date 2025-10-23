@@ -70,17 +70,15 @@ jobs:
         with:
           script: |
             const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
-            
-            const fs = require('fs')      
-            const body = [
-            📎 [Download Semgrep TXT & JSON report here](${runUrl}) 
-            ]
+
+            const body = `
+            📎 [Download Snyk TXT & JSON report here](${runUrl}) ` 
             
             await github.rest.issues.createComment({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: context.issue.number,
-            body
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body
             });
 # const report = fs.readFileSync('pretty-comment.md', 'utf8');
       
