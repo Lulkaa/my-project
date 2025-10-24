@@ -152,8 +152,8 @@ if (hasFindings) {
 const body = bodyParts.join('\n');
 
 // Запис у файл
-fs.writeFileSync('pretty-comment.md', body, 'utf8');
-console.log('Wrote pretty-comment.md');
+fs.writeFileSync('pretty-comment1.md', body, 'utf8');
+console.log('Wrote pretty-comment1.md');
 
 // Встановити GITHUB_OUTPUT (як у вашому оригіналі)
 try {
