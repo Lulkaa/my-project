@@ -7,116 +7,128 @@ if (!fs.existsSync(path)) {
 }
 
 const raw = fs.readFileSync(path, 'utf8');
-const lines = raw.split(/\r?\n/);
 
+// Невелика утиліта для заміни HTML-ентиті, якщо такі трапилися у вхідному файлі
+function htmlUnescape(s) {
+  return s
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+}
+
+const lines = htmlUnescape(raw).split(/\r?\n/);
+
+// Збір знахідок
 const findings = [];
 let current = null;
 let captureMessage = [];
 
-// Рядок, що схожий на шлях до файлу
+// Регіекс для імені файлу (шлях з розширенням)
 const fileLineRe = /^\s*([^\s].*?\.(?:js|ts|jsx|tsx|py|java|go|rb))\s*$/i;
-// Рядок із нумерацією типу "17┆ ..."
-const numberedLineRe = /^\s*\d+┆\s+.*$/;
-// Патерни ризикових рядків
+// Регіекс для нумерованих рядків "17┆ some code"
+const numberedLineRe = /^\s*(\d+┆\s*)(.*)$/;
+// Регіекс для "цікавих" рядків (new RegExp, Nested regex, ReDoS, vulnerable to backtracking)
 const interestingCodeRe = /(const\s+regex\s*=\s*new\s+RegExp)|\b(Nested regex|vulnerable to backtracking|ReDoS)\b/i;
 
-function escapeHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-const red = (s) => `<span style="color:red">${escapeHtml(s)}</span>`;
-
-// Нормалізувати початкові пробіли перед номером рядка: "           17┆ ..." -> "17┆ ..."
-function normalizeLeadingIndent(line) {
-  return line.replace(/^\s+(\d+┆\s+)/, '$1');
+// Нормалізуємо ведучі пробіли перед номером: "     17┆ ..." -> "17┆ ..."
+function normalizeNumbered(line) {
+  return line.replace(/^\s+(\d+┆\s*)/, '$1').trimEnd();
 }
 
-// Обгортка рядка для код-блоку (без <div> усередині)
-function codeLine(line, highlight=false) {
-  const normalized = normalizeLeadingIndent(line);
-  const esc = escapeHtml(normalized);
-  return highlight ? `<mark>${esc}</mark>` : esc;
-}
-
+// Дохоплюємо знахідки
 for (let i = 0; i < lines.length; i++) {
-  const line = lines[i];
+  const rawLine = lines[i];
+  const line = rawLine || '';
 
+  // Новий файл (шлях)
   const fileMatch = line.match(fileLineRe);
   if (fileMatch) {
+    // зберегти попередній
     if (current) {
-      current.message = captureMessage.join('\n').trim();
+      current.message = captureMessage.join(' ').replace(/\s+/g, ' ').trim();
       findings.push(current);
     }
-    current = { file: fileMatch[1].trim(), rule: null, message: '', codeLines: [] };
+    // почати новий блок
+    current = { file: fileMatch[1].trim(), message: '', codeLines: [] };
     captureMessage = [];
     continue;
   }
 
-  if (!current) continue;
-
-  if (!current.rule) {
-    if (line.includes('semgrep') || line.match(/[a-z0-9_.-]+-rule/i) || line.includes('detect-')) {
-      current.rule = line.trim();
-      continue;
-    }
-  }
-
-  if (numberedLineRe.test(line)) {
-    current.codeLines.push({ raw: line, highlight: true });
+  if (!current) {
+    // поки не зустріли файл — ігнорувати
     continue;
   }
 
+  // Якщо рядок з нумерацією — зберігаємо (нормалізуємо пробіли)
+  const numMatch = line.match(numberedLineRe);
+  if (numMatch) {
+    const normalized = normalizeNumbered(line);
+    current.codeLines.push(normalized);
+    continue;
+  }
+
+  // Якщо рядок містить цікавий патерн — зберігаємо його як окремий рядок коду
   if (interestingCodeRe.test(line)) {
-    current.codeLines.push({ raw: line, highlight: true });
+    current.codeLines.push(line.trim());
     continue;
   }
 
-  if (line.trim() === '') continue;
+  // Пусті рядки — розділювачі
+  if (line.trim() === '') {
+    continue;
+  }
 
+  // Інакше — частина повідомлення/опису
   captureMessage.push(line.trim());
 }
 
+// Під кінець зберегти останній блок
 if (current) {
-  current.message = captureMessage.join('\n').trim();
+  current.message = captureMessage.join(' ').replace(/\s+/g, ' ').trim();
   findings.push(current);
 }
 
+// Формуємо markdown у потрібному простому вигляді
 const hasFindings = findings.length > 0;
 const header = hasFindings
   ? `### Semgrep found ${findings.length} findings`
   : `### Semgrep: no findings found`;
 
-let bodyParts = [header, ''];
+const parts = [header, ''];
 
 if (hasFindings) {
-  bodyParts.push('**Details:**', '');
   for (const f of findings) {
-    const fileHtml = red(f.file);
-    const ruleLine = f.rule ? `<div><em>${escapeHtml(f.rule.trim())}</em></div>` : '';
-    const messageHtml = f.message ? `<div>${escapeHtml(f.message)}</div>` : '';
-
-    let codeBlock = '';
-    if (f.codeLines?.length) {
-      const inner = f.codeLines
-        .map(cl => codeLine(cl.raw, cl.highlight || interestingCodeRe.test(cl.raw)))
-        .join('\n');
-      codeBlock = `<div style="margin-top:8px;margin-bottom:8px"><pre style="background:#f6f8fa;padding:8px;border-radius:6px;overflow:auto"><code>${inner}</code></pre></div>`;
+    parts.push(`- **File:** ${f.file}`);
+    if (f.message && f.message.length > 0) {
+      parts.push(`  **Message:** ${f.message}`);
+    } else {
+      parts.push(`  **Message:** (no description)`);
     }
 
-    const itemHtml =
-      `- **File:** ${fileHtml}\n` +
-      (ruleLine ? `  \n  ${ruleLine}\n` : '') +
-      (messageHtml ? `  \n  ${messageHtml}\n` : '') +
-      `\n${codeBlock}\n`;
+    if (f.codeLines && f.codeLines.length > 0) {
+      parts.push(`  **Code strings:**`);
+      parts.push('  ```');
+      for (const cl of f.codeLines) {
+        parts.push(`  ${cl}`);
+      }
+      parts.push('  ```');
+    } else {
+      parts.push(`  **Code strings:** (none found)`);
+    }
 
-    bodyParts.push(itemHtml);
+    parts.push(''); // пустий рядок між знахідками
   }
+} else {
+  parts.push('No findings.');
 }
 
-const body = bodyParts.join('\n');
+const output = parts.join('\n');
 
-fs.writeFileSync('pretty-comment1.md', body, 'utf8');
+fs.writeFileSync('pretty-comment1.md', output, 'utf8');
 console.log('Wrote pretty-comment1.md');
 
+// Запис у GITHUB_OUTPUT
 try {
   const ghOut = process.env.GITHUB_OUTPUT;
   if (ghOut) {
@@ -129,3 +141,4 @@ try {
 }
 
 console.log(`has_findings=${hasFindings}`);
+
