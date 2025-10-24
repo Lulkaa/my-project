@@ -17,6 +17,7 @@ function htmlUnescape(s) {
     .replace(/&amp;/g, "&");
 }
 
+
 const lines = htmlUnescape(raw).split(/\r?\n/);
 
 // Акумулюємо знахідки
