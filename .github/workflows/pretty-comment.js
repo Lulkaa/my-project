@@ -22,6 +22,7 @@ const fileLineRe = /^\s*([^\s].*?\.(?:js|ts|jsx|tsx|py|java|go|rb))\s*$/i;
 // Рядок коду з нумерацією як "17┆ ..." (не відкидаємо префікс)
 const numberedLineRe = /^\s*\d+┆\s+.*$/;
 
+
 // Рядки, які треба підсвічувати жовтим
 const interestingCodeRe = /(const\s+regex\s*=\s*new\s+RegExp)|\b(Nested regex|vulnerable to backtracking|ReDoS)\b/i;
 
