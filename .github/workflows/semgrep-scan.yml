@@ -75,13 +75,17 @@ jobs:
           script: |
             const fs = require('fs');
             const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
-            const report = fs.readFileSync('pretty-comment.md', 'utf8');
+            const report = fs.readFileSync('semgrep_scan_results.txt', 'utf8');
             
             const body = [
-            report,
-            '',
-            `📎 [Download Semgrep TXT & JSON report here](${runUrl})`
+            📎 [Download Semgrep TXT & JSON report here](${runUrl}) 
+              '### Semgrep Scan Report Results',
+              '',
+              '```txt',
+              report,
+              '```',
             ].join('\n');
+            ]
             
             await github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -95,3 +99,4 @@ jobs:
         run: |
           echo "High/Medium/Critical vulnerabilities were found. Failing the job."
           exit 1
+          
