@@ -211,8 +211,8 @@ const output = [
   hasFindings ? "---\n" + body : "",
 ].join("\n");
 
-fs.writeFileSync("pretty-comment.md", output, "utf8");
-console.log("Wrote pretty-comment.md");
+fs.writeFileSync("pretty-comment1.md", output, "utf8");
+console.log("Wrote pretty-comment1.md");
 
 /* -------------------- GITHUB_OUTPUT -------------------- */
 try {
