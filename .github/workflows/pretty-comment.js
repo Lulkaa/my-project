@@ -25,6 +25,7 @@ function escapeHtml(s) {
 }
 const red = (s) => `<span style="color:red">${escapeHtml(s)}</span>`;
 
+
 // Нормалізувати початкові пробіли перед номером рядка: "           17┆ ..." -> "17┆ ..."
 function normalizeLeadingIndent(line) {
   return line.replace(/^\s+(\d+┆\s+)/, '$1');
