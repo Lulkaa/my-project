@@ -123,8 +123,8 @@ if (hasFindings) {
 
 const body = bodyParts.join('\n');
 
-fs.writeFileSync('pretty-comment.md', body, 'utf8');
-console.log('Wrote pretty-comment.md');
+fs.writeFileSync('pretty-comment1.md', body, 'utf8');
+console.log('Wrote pretty-comment1.md');
 
 try {
   const ghOut = process.env.GITHUB_OUTPUT;
