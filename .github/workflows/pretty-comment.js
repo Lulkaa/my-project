@@ -24,6 +24,7 @@ const findings = [];
 let current = null;
 let captureMessage = [];
 
+
 // Регіекс для імені файлу (шлях з розширенням)
 const fileLineRe = /^\s*([^\s].*?\.(?:js|ts|jsx|tsx|py|java|go|rb))\s*$/i;
 // Регіекс для нумерованих рядків "17┆ some code"
