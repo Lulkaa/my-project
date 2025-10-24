@@ -66,7 +66,7 @@ jobs:
       
       - name: Build PR comment
         id: parse
-        run: node .github/workflows/pretty-md-comment.js
+        run: node .github/workflows/pretty-comment.js
         
       - name: Comment Semgrep report
         if: ${{ github.event_name == 'pull_request' }}
@@ -76,7 +76,7 @@ jobs:
             const fs = require('fs');
 
             const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
-            const report = fs.readFileSync('semgrep_scan_results.txt', 'utf8');
+            const report = fs.readFileSync('pretty-comment1.md', 'utf8');
 
             const body = [
               `📎 [Download Semgrep TXT & JSON report here](${runUrl})`,
