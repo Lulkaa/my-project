@@ -8,6 +8,8 @@ if (!fs.existsSync(path)) {
 
 const raw = fs.readFileSync(path, "utf8");
 
+/* -------------------- Utils -------------------- */
+
 // Розкодувати можливі HTML-ентіті з джерела
 function htmlUnescape(s) {
   return s
@@ -19,51 +21,62 @@ function htmlUnescape(s) {
 
 const lines = htmlUnescape(raw).split(/\r?\n/);
 
-// Акумулюємо знахідки
-const findings = [];
-let current = null;
-let captureMessage = [];
-
-// Регулярки
-const fileLineRe = /^\s*([^\s].*?\.(?:js|ts|jsx|tsx|py|java|go|rb))\s*$/i;
-const numberedLineRe = /^\s*(\d+┆\s*)(.*)$/;
-const interestingCodeRe =
-  /(const\s+regex\s*=\s*new\s+RegExp)|\b(Nested regex|vulnerable to backtracking|ReDoS)\b/i;
-
-const ruleMarkers = [
-  /^.*❯❯❱\s*(.+)$/,            // "❯❯❱ semgrep_rules.something"
-  /^\s*javascript\.[\w.-]+$/,  // "javascript.lang.security...."
-  /^\s*[a-z0-9_.-]+-rule\s*$/i,
-  /^\s*semgrep[\w\W]*rule.*$/i,
-];
-
 // прибираємо декоративні розділювачі з message
 const WALL_RE = /(?:^|\s)⋮┆[-─—–]{4,}(?:\s|$)/g;
 
 // нормалізуємо «  .» -> «.» та зайві пробіли
 function normalizeMessage(s) {
   return s
-    .replace(WALL_RE, " ")           // прибрати "⋮┆------"
-    .replace(/\s+\./g, ".")          // зайві пробіли перед крапкою
-    .replace(/\s+/g, " ")            // злиплий текст
+    .replace(WALL_RE, " ")
+    .replace(/\s+\./g, ".")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
 function normalizeNumbered(line) {
+  // зберігаємо лідируючий "16┆ " тощо, але чистимо трейлінг-пробіли
   return line.replace(/^\s+(\d+┆\s*)/, "$1").trimEnd();
 }
+
+function mdEscapeInline(s) {
+  // легкий ескейп для інлайнів (таблиці/заголовки не ламаємо)
+  return s.replace(/[|*_`]/g, (m) => "\\" + m);
+}
+
+/* -------------------- Парсер -------------------- */
+
+const findings = [];
+let current = null;
+let captureMessage = [];
+
+const fileLineRe =
+  /^\s*(?:\*\*File:\*\*\s*)?([^\s].*?\.(?:js|ts|jsx|tsx|py|java|go|rb))\s*$/i;
+
+const numberedLineRe = /^\s*(\d+┆\s*)(.*)$/;
+
+const interestingCodeRe =
+  /(const\s+regex\s*=\s*new\s+RegExp)|\b(Nested regex|vulnerable to backtracking|ReDoS)\b/i;
+
+const ruleMarkers = [
+  /^.*❯❯❱\s*(.+)$/, // "❯❯❱ semgrep_rules.something"
+  /^\s*javascript\.[\w.-]+$/, // "javascript.lang.security...."
+  /^\s*[a-z0-9_.-]+-rule\s*$/i,
+  /^\s*semgrep[\w\W]*rule.*$/i,
+  /^\s*\*\*Rule:\*\*\s*(.+)$/i, // підтримка вже відформатованих блоків
+];
 
 function isRuleLine(line) {
   const t = line.trim();
   return ruleMarkers.some((re) => re.test(t));
 }
 function extractRule(line) {
-  const m = line.match(/^.*❯❯❱\s*(.+)$/);
+  let m = line.match(/^.*❯❯❱\s*(.+)$/);
+  if (m) return m[1].trim();
+  m = line.match(/^\s*\*\*Rule:\*\*\s*(.+)$/i);
   if (m) return m[1].trim();
   return line.trim();
 }
 
-// Парсимо txt
 for (const rawLine of lines) {
   const line = rawLine ?? "";
 
@@ -74,7 +87,12 @@ for (const rawLine of lines) {
       current.message = normalizeMessage(captureMessage.join(" "));
       findings.push(current);
     }
-    current = { file: fileMatch[1].trim(), rule: "", message: "", codeLines: [] };
+    current = {
+      file: fileMatch[1].trim(),
+      rule: "",
+      message: "",
+      codeLines: [],
+    };
     captureMessage = [];
     continue;
   }
@@ -109,43 +127,107 @@ if (current) {
   findings.push(current);
 }
 
-// Формуємо плоскийMarkdown
+/* -------------------- Форматування Markdown -------------------- */
+
 const hasFindings = findings.length > 0;
-const parts = [];
-parts.push(`### Semgrep found ${findings.length} findings\n`);
+
+// Підрахунки для summary
+const byRule = new Map();
+const byFile = new Map();
 
 for (const f of findings) {
-  parts.push(`**File:** ${f.file}`);
-  if (f.rule) parts.push(`**Rule:** ${f.rule}`);
-  parts.push(`**Message:** ${f.message || "(no description)"}`);
-  parts.push(`**Code strings:**`);
-  if (f.codeLines.length) {
-    for (const cl of f.codeLines) parts.push(cl);
-  } else {
-    parts.push("(none)");
-  }
-  parts.push(""); // розділювач між блоками
+  const rule = f.rule || "(unknown rule)";
+  byRule.set(rule, (byRule.get(rule) || 0) + 1);
+  byFile.set(f.file, (byFile.get(f.file) || 0) + 1);
 }
 
-const output = parts.join("\n");
-fs.writeFileSync("pretty-comment1.md", output, "utf8");
-console.log("Wrote pretty-comment1.md");
+function renderSummaryTable(title, map, sortDesc = true) {
+  const entries = Array.from(map.entries());
+  entries.sort((a, b) =>
+    sortDesc ? b[1] - a[1] || a[0].localeCompare(b[0]) : a[0].localeCompare(b[0])
+  );
+  if (!entries.length) return "";
+  const rows = entries
+    .map(([k, v]) => `| ${mdEscapeInline(k)} | ${v} |`)
+    .join("\n");
+  return [
+    `#### ${title}`,
+    "",
+    "| Item | Findings |",
+    "|---|---:|",
+    rows,
+    "",
+  ].join("\n");
+}
 
-// GITHUB_OUTPUT
+function renderCodeBlock(codeLines) {
+  if (!codeLines?.length) return "_(no code)_";
+  // Виводимо як ```text, щоб зберегти «16┆ const ...»
+  const body = codeLines.join("\n");
+  return [
+    "<details>",
+    "<summary><strong>Show code</strong></summary>",
+    "",
+    "```text",
+    body,
+    "```",
+    "",
+    "</details>",
+  ].join("\n");
+}
+
+const now = new Date();
+const header = `# 🛡️ Semgrep Report
+
+**Scanned:** ${now.toISOString().replace("T", " ").replace(/\.\d+Z$/, " UTC")}  
+**Total findings:** ${findings.length}
+
+> This comment is auto-generated from \`semgrep_scan_results.txt\`.  
+> Messages are normalized to remove decorative separators and spacing artifacts.
+`;
+
+const summary =
+  renderSummaryTable("By Rule", byRule) + renderSummaryTable("By File", byFile);
+
+const body = findings
+  .map((f, idx) => {
+    const ruleBadge = f.rule ? "`" + f.rule + "`" : "`(unknown rule)`";
+    const message = f.message || "(no description)";
+    return [
+      `## ${idx + 1}. ${f.file}`,
+      `**Rule:** ${ruleBadge}`,
+      "",
+      `> ${message}`,
+      "",
+      renderCodeBlock(f.codeLines),
+      "",
+    ].join("\n");
+  })
+  .join("\n");
+
+const output = [
+  header,
+  hasFindings ? summary : "✅ No findings. Great job!",
+  hasFindings ? "---\n" + body : "",
+].join("\n");
+
+fs.writeFileSync("pretty-comment.md", output, "utf8");
+console.log("Wrote pretty-comment.md");
+
+/* -------------------- GITHUB_OUTPUT -------------------- */
 try {
   const ghOut = process.env.GITHUB_OUTPUT;
+  const line = `has_findings=${hasFindings}\n`;
   if (ghOut) {
-    fs.writeFileSync(ghOut, `has_findings=${hasFindings}\n`, { flag: "a" });
+    fs.writeFileSync(ghOut, line, { flag: "a" });
   } else {
-    fs.writeFileSync("./github_output.txt", `has_findings=${hasFindings}\n`, { flag: "a" });
+    fs.writeFileSync("./github_output.txt", line, { flag: "a" });
   }
 } catch (e) {
   console.warn("Could not write to GITHUB_OUTPUT:", e.message);
 }
 
 console.log(`has_findings=${hasFindings}`);
-
-
 
 
 console.log(`has_findings=${hasFindings}`);
