@@ -115,8 +115,8 @@ for (const f of findings) {
 }
 
 const output = parts.join("\n");
-fs.writeFileSync("pretty-comment.md", output, "utf8");
-console.log("Wrote pretty-comment.md");
+fs.writeFileSync("pretty-comment1.md", output, "utf8");
+console.log("Wrote pretty-comment1.md");
 
 // GITHUB_OUTPUT
 try {
