@@ -16,6 +16,7 @@ const findings = [];
 let current = null;
 let captureMessage = [];
 
+
 // Рядок, який виглядає як шлях до файлу
 const fileLineRe = /^\s*([^\s].*?\.(?:js|ts|jsx|tsx|py|java|go|rb))\s*$/i;
 
