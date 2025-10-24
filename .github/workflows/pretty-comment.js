@@ -9,39 +9,37 @@ if (!fs.existsSync(path)) {
 const raw = fs.readFileSync(path, 'utf8');
 const lines = raw.split(/\r?\n/);
 
-// Знахідки
 const findings = [];
-
-// Стан парсера
 let current = null;
 let captureMessage = [];
 
-// Рядок, який виглядає як шлях до файлу
+// Рядок, що схожий на шлях до файлу
 const fileLineRe = /^\s*([^\s].*?\.(?:js|ts|jsx|tsx|py|java|go|rb))\s*$/i;
-
-// Рядок коду з нумерацією як "17┆ ..." (не відкидаємо префікс)
+// Рядок із нумерацією типу "17┆ ..."
 const numberedLineRe = /^\s*\d+┆\s+.*$/;
-
-// Рядки, які треба підсвічувати жовтим
+// Патерни ризикових рядків
 const interestingCodeRe = /(const\s+regex\s*=\s*new\s+RegExp)|\b(Nested regex|vulnerable to backtracking|ReDoS)\b/i;
 
 function escapeHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
-
 const red = (s) => `<span style="color:red">${escapeHtml(s)}</span>`;
-// Якщо GitHub ріже style, заміни вище на: const red = (s) => `🔴 ${'`'+s+'`'}`;
 
-const wrapCode = (line, highlight=false) => {
-  const esc = escapeHtml(line);
-  // без додаткових стилів — лише <mark> для підсвічування
-  return highlight ? `<div><mark>${esc}</mark></div>` : `<div>${esc}</div>`;
-};
+// Нормалізувати початкові пробіли перед номером рядка: "           17┆ ..." -> "17┆ ..."
+function normalizeLeadingIndent(line) {
+  return line.replace(/^\s+(\d+┆\s+)/, '$1');
+}
+
+// Обгортка рядка для код-блоку (без <div> усередині)
+function codeLine(line, highlight=false) {
+  const normalized = normalizeLeadingIndent(line);
+  const esc = escapeHtml(normalized);
+  return highlight ? `<mark>${esc}</mark>` : esc;
+}
 
 for (let i = 0; i < lines.length; i++) {
   const line = lines[i];
 
-  // Новий файл?
   const fileMatch = line.match(fileLineRe);
   if (fileMatch) {
     if (current) {
@@ -55,7 +53,6 @@ for (let i = 0; i < lines.length; i++) {
 
   if (!current) continue;
 
-  // Спробуємо вловити строку з rule/id
   if (!current.rule) {
     if (line.includes('semgrep') || line.match(/[a-z0-9_.-]+-rule/i) || line.includes('detect-')) {
       current.rule = line.trim();
@@ -63,27 +60,21 @@ for (let i = 0; i < lines.length; i++) {
     }
   }
 
-  // Рядок коду (із нумерацією) — залишаємо як є
   if (numberedLineRe.test(line)) {
-    const shouldHighlight = true; // будь-який такий рядок — жовтий, як ти просив
-    current.codeLines.push({ raw: line, highlight: shouldHighlight });
+    current.codeLines.push({ raw: line, highlight: true });
     continue;
   }
 
-  // Звичайний код (без нумерації), але який містить цікаві патерни
   if (interestingCodeRe.test(line)) {
     current.codeLines.push({ raw: line, highlight: true });
     continue;
   }
 
-  // Порожні розділювачі — просто пропускаємо або копимо в message
   if (line.trim() === '') continue;
 
-  // Інший текст — у message
   captureMessage.push(line.trim());
 }
 
-// Записати останній блок
 if (current) {
   current.message = captureMessage.join('\n').trim();
   findings.push(current);
@@ -106,7 +97,7 @@ if (hasFindings) {
     let codeBlock = '';
     if (f.codeLines?.length) {
       const inner = f.codeLines
-        .map(cl => wrapCode(cl.raw, cl.highlight || interestingCodeRe.test(cl.raw)))
+        .map(cl => codeLine(cl.raw, cl.highlight || interestingCodeRe.test(cl.raw)))
         .join('\n');
       codeBlock = `<div style="margin-top:8px;margin-bottom:8px"><pre style="background:#f6f8fa;padding:8px;border-radius:6px;overflow:auto"><code>${inner}</code></pre></div>`;
     }
@@ -123,8 +114,8 @@ if (hasFindings) {
 
 const body = bodyParts.join('\n');
 
-fs.writeFileSync('pretty-comment1.md', body, 'utf8');
-console.log('Wrote pretty-comment1.md');
+fs.writeFileSync('pretty-comment.md', body, 'utf8');
+console.log('Wrote pretty-comment.md');
 
 try {
   const ghOut = process.env.GITHUB_OUTPUT;
