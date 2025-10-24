@@ -8,6 +8,7 @@ if (!fs.existsSync(path)) {
 
 const raw = fs.readFileSync(path, "utf8");
 
+// Розкодувати можливі HTML-ентіті з джерела
 function htmlUnescape(s) {
   return s
     .replace(/&nbsp;/g, " ")
@@ -18,7 +19,7 @@ function htmlUnescape(s) {
 
 const lines = htmlUnescape(raw).split(/\r?\n/);
 
-// Збір знахідок
+// Акумулюємо знахідки
 const findings = [];
 let current = null;
 let captureMessage = [];
@@ -29,19 +30,32 @@ const numberedLineRe = /^\s*(\d+┆\s*)(.*)$/;
 const interestingCodeRe =
   /(const\s+regex\s*=\s*new\s+RegExp)|\b(Nested regex|vulnerable to backtracking|ReDoS)\b/i;
 
-// типові rule-рядки
 const ruleMarkers = [
-  /^.*❯❯❱\s*(.+)$/,
-  /^\s*javascript\.[\w.-]+$/,
+  /^.*❯❯❱\s*(.+)$/,            // "❯❯❱ semgrep_rules.something"
+  /^\s*javascript\.[\w.-]+$/,  // "javascript.lang.security...."
   /^\s*[a-z0-9_.-]+-rule\s*$/i,
   /^\s*semgrep[\w\W]*rule.*$/i,
 ];
 
+// прибираємо декоративні розділювачі з message
+const WALL_RE = /(?:^|\s)⋮┆[-─—–]{4,}(?:\s|$)/g;
+
+// нормалізуємо «  .» -> «.» та зайві пробіли
+function normalizeMessage(s) {
+  return s
+    .replace(WALL_RE, " ")           // прибрати "⋮┆------"
+    .replace(/\s+\./g, ".")          // зайві пробіли перед крапкою
+    .replace(/\s+/g, " ")            // злиплий текст
+    .trim();
+}
+
 function normalizeNumbered(line) {
   return line.replace(/^\s+(\d+┆\s*)/, "$1").trimEnd();
 }
+
 function isRuleLine(line) {
-  return ruleMarkers.some((re) => re.test(line));
+  const t = line.trim();
+  return ruleMarkers.some((re) => re.test(t));
 }
 function extractRule(line) {
   const m = line.match(/^.*❯❯❱\s*(.+)$/);
@@ -49,15 +63,15 @@ function extractRule(line) {
   return line.trim();
 }
 
-// Парсинг
+// Парсимо txt
 for (const rawLine of lines) {
   const line = rawLine ?? "";
 
-  // новий файл
+  // новий блок файлу
   const fileMatch = line.match(fileLineRe);
   if (fileMatch) {
     if (current) {
-      current.message = captureMessage.join(" ").replace(/\s+/g, " ").trim();
+      current.message = normalizeMessage(captureMessage.join(" "));
       findings.push(current);
     }
     current = { file: fileMatch[1].trim(), rule: "", message: "", codeLines: [] };
@@ -67,38 +81,37 @@ for (const rawLine of lines) {
 
   if (!current) continue;
 
-  // rule
-  if (!current.rule && isRuleLine(line.trim())) {
+  // Rule у окремому полі
+  if (!current.rule && isRuleLine(line)) {
     current.rule = extractRule(line);
     continue;
   }
 
-  // код із нумерацією
+  // рядки коду з нумерацією
   if (numberedLineRe.test(line)) {
     current.codeLines.push(normalizeNumbered(line));
     continue;
   }
 
-  // «цікаві» рядки без нумерації
+  // «цікаві» рядки коду без нумерації
   if (interestingCodeRe.test(line)) {
     current.codeLines.push(line.trim());
     continue;
   }
 
-  // інше — у message
+  // все інше — у Message
   if (line.trim() !== "") captureMessage.push(line.trim());
 }
 
-// останній блок
+// фіналізуємо останній блок
 if (current) {
-  current.message = captureMessage.join(" ").replace(/\s+/g, " ").trim();
+  current.message = normalizeMessage(captureMessage.join(" "));
   findings.push(current);
 }
 
-// Формування markdown
+// Формуємо плоскийMarkdown
 const hasFindings = findings.length > 0;
 const parts = [];
-
 parts.push(`### Semgrep found ${findings.length} findings\n`);
 
 for (const f of findings) {
@@ -131,6 +144,7 @@ try {
 }
 
 console.log(`has_findings=${hasFindings}`);
+
 
 
 
