@@ -1,20 +1,21 @@
-const fs = require('fs');
-const path = './semgrep_scan_results.txt';
+const fs = require("fs");
+const path = "./semgrep_scan_results.txt";
 
 if (!fs.existsSync(path)) {
   console.error(`Input file not found: ${path}`);
   process.exit(1);
 }
 
-const raw = fs.readFileSync(path, 'utf8');
+const raw = fs.readFileSync(path, "utf8");
 
 function htmlUnescape(s) {
   return s
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&');
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
 }
+
 const lines = htmlUnescape(raw).split(/\r?\n/);
 
 // Збір знахідок
@@ -22,22 +23,23 @@ const findings = [];
 let current = null;
 let captureMessage = [];
 
-// Регіекси
+// Регулярки
 const fileLineRe = /^\s*([^\s].*?\.(?:js|ts|jsx|tsx|py|java|go|rb))\s*$/i;
 const numberedLineRe = /^\s*(\d+┆\s*)(.*)$/;
-const interestingCodeRe = /(const\s+regex\s*=\s*new\s+RegExp)|\b(Nested regex|vulnerable to backtracking|ReDoS)\b/i;
-// типові рядки з rule
+const interestingCodeRe =
+  /(const\s+regex\s*=\s*new\s+RegExp)|\b(Nested regex|vulnerable to backtracking|ReDoS)\b/i;
+
+// типові rule-рядки
 const ruleMarkers = [
-  /^.*❯❯❱\s*(.+)$/,              // "❯❯❱ semgrep_rules.something"
-  /^\s*javascript\.[\w.-]+$/,    // "javascript.lang.security...."
-  /^\s*[a-z0-9_.-]+-rule\s*$/i,  // "...-rule"
-  /^\s*semgrep[\w\W]*rule.*$/i   // "semgrep ... rule"
+  /^.*❯❯❱\s*(.+)$/,
+  /^\s*javascript\.[\w.-]+$/,
+  /^\s*[a-z0-9_.-]+-rule\s*$/i,
+  /^\s*semgrep[\w\W]*rule.*$/i,
 ];
 
 function normalizeNumbered(line) {
-  return line.replace(/^\s+(\d+┆\s*)/, '$1').trimEnd();
+  return line.replace(/^\s+(\d+┆\s*)/, "$1").trimEnd();
 }
-
 function isRuleLine(line) {
   return ruleMarkers.some((re) => re.test(line));
 }
@@ -48,24 +50,24 @@ function extractRule(line) {
 }
 
 // Парсинг
-for (let i = 0; i < lines.length; i++) {
-  const line = lines[i] ?? '';
+for (const rawLine of lines) {
+  const line = rawLine ?? "";
 
   // новий файл
   const fileMatch = line.match(fileLineRe);
   if (fileMatch) {
     if (current) {
-      current.message = captureMessage.join(' ').replace(/\s+/g, ' ').trim();
+      current.message = captureMessage.join(" ").replace(/\s+/g, " ").trim();
       findings.push(current);
     }
-    current = { file: fileMatch[1].trim(), rule: '', message: '', codeLines: [] };
+    current = { file: fileMatch[1].trim(), rule: "", message: "", codeLines: [] };
     captureMessage = [];
     continue;
   }
 
   if (!current) continue;
 
-  // rule — окремий рядок, не додаємо в message
+  // rule
   if (!current.rule && isRuleLine(line.trim())) {
     current.rule = extractRule(line);
     continue;
@@ -77,62 +79,59 @@ for (let i = 0; i < lines.length; i++) {
     continue;
   }
 
-  // «цікаві» рядки коду без нумерації
+  // «цікаві» рядки без нумерації
   if (interestingCodeRe.test(line)) {
     current.codeLines.push(line.trim());
     continue;
   }
 
-  // інше — у повідомлення
-  if (line.trim() !== '') {
-    captureMessage.push(line.trim());
-  }
+  // інше — у message
+  if (line.trim() !== "") captureMessage.push(line.trim());
 }
 
-// зберегти останній блок
+// останній блок
 if (current) {
-  current.message = captureMessage.join(' ').replace(/\s+/g, ' ').trim();
+  current.message = captureMessage.join(" ").replace(/\s+/g, " ").trim();
   findings.push(current);
 }
 
-// Формування однорідного Markdown
+// Формування markdown
 const hasFindings = findings.length > 0;
 const parts = [];
 
-parts.push(`### Semgrep found ${findings.length} findings`);
-parts.push('');
+parts.push(`### Semgrep found ${findings.length} findings\n`);
 
 for (const f of findings) {
   parts.push(`**File:** ${f.file}`);
   if (f.rule) parts.push(`**Rule:** ${f.rule}`);
-  parts.push(`**Message:** ${f.message || '(no description)'}`);
+  parts.push(`**Message:** ${f.message || "(no description)"}`);
   parts.push(`**Code strings:**`);
   if (f.codeLines.length) {
-    // без код-блоків і списків — просто рядки
     for (const cl of f.codeLines) parts.push(cl);
   } else {
-    parts.push('(none)');
+    parts.push("(none)");
   }
-  parts.push(''); // порожній рядок між блоками
+  parts.push(""); // розділювач між блоками
 }
 
-const output = parts.join('\n');
-fs.writeFileSync('pretty-comment1.md', output, 'utf8');
-console.log('Wrote pretty-comment1.md');
+const output = parts.join("\n");
+fs.writeFileSync("pretty-comment.md", output, "utf8");
+console.log("Wrote pretty-comment.md");
 
 // GITHUB_OUTPUT
 try {
   const ghOut = process.env.GITHUB_OUTPUT;
   if (ghOut) {
-    fs.writeFileSync(ghOut, `has_findings=${hasFindings}\n`, { flag: 'a' });
+    fs.writeFileSync(ghOut, `has_findings=${hasFindings}\n`, { flag: "a" });
   } else {
-    fs.writeFileSync('./github_output.txt', `has_findings=${hasFindings}\n`, { flag: 'a' });
+    fs.writeFileSync("./github_output.txt", `has_findings=${hasFindings}\n`, { flag: "a" });
   }
 } catch (e) {
-  console.warn('Could not write to GITHUB_OUTPUT:', e.message);
+  console.warn("Could not write to GITHUB_OUTPUT:", e.message);
 }
 
 console.log(`has_findings=${hasFindings}`);
+
 
 
 console.log(`has_findings=${hasFindings}`);
