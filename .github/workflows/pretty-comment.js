@@ -130,6 +130,7 @@ try {
   console.warn("Could not write to GITHUB_OUTPUT:", e.message);
 }
 
+
 console.log(`has_findings=${hasFindings}`);
 
 
