@@ -22,6 +22,7 @@ const findings = [];
 let current = null;
 let captureMessage = [];
 
+
 // Регіекси
 const fileLineRe = /^\s*([^\s].*?\.(?:js|ts|jsx|tsx|py|java|go|rb))\s*$/i;
 const numberedLineRe = /^\s*(\d+┆\s*)(.*)$/;
