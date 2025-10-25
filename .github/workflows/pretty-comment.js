@@ -20,6 +20,7 @@ function parseSemgrepTxt(rawText) {
     // 3. Message/Code Block (The entire content until the start of the next finding or end of file)
     const blockRegex = /\n\s*(\S+\.js)\n\s*❯❯❱\s*(\S+)\n([\s\S]*?)(?=\n\s*\S+\.js\n|\n\s*┌|$)/gm;
 
+    
     while ((match = blockRegex.exec(rawText)) !== null) {
         // Avoid infinite loops
         if (match.index === blockRegex.lastIndex) {
