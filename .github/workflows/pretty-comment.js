@@ -1,10 +1,3 @@
-Absolutely\! Here is the requested script translated entirely into English.
-
-This script, named `pretty-comment.js`, reads the **Semgrep JSON** report, filters for high-impact issues, converts the findings into **Markdown** format, and sets an output variable for your GitHub Actions workflow.
-
-## pretty-comment.js (English Version)
-
-```javascript
 const fs = require('fs');
 const path = require('path');
 
@@ -128,4 +121,4 @@ fs.writeFileSync(process.env.GITHUB_OUTPUT, output, { flag: 'a' });
 
 console.log(`Markdown report written to ${OUTPUT_FILE}`);
 console.log(`has_issues=${hasIssues}`);
-```
+
