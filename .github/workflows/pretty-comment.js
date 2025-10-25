@@ -19,6 +19,7 @@ function htmlUnescape(s) {
     .replace(/&amp;/g, "&");
 }
 
+
 const lines = htmlUnescape(raw).split(/\r?\n/);
 
 // прибираємо декоративні розділювачі з message
