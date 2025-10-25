@@ -14,6 +14,7 @@ function parseSemgrepTxt(rawText) {
     const findings = [];
     let match;
 
+    
     // Regex to capture blocks:
     // 1. File Path (e.g., routes/authRoutes.js)
     // 2. Rule ID (e.g., semgrep_rules.nosql-injection-rule)
