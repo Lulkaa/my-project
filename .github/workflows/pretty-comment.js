@@ -6,7 +6,7 @@ const OUTPUT_FILE = 'pretty-comment1.md'; // The file your GitHub Action step re
 
 /**
  * Parses Semgrep TXT output and returns a list of finding objects.
- * WARNING: Parsing TXT output is brittle and highly dependent on Semgrep's exact formatting.
+ * This regex is specifically tuned for Semgrep output format including code lines.
  * @param {string} rawText - The raw content of the Semgrep TXT file.
  * @returns {Array<object>} List of findings.
  */
@@ -14,34 +14,63 @@ function parseSemgrepTxt(rawText) {
     const findings = [];
     let match;
 
-    // Regex to capture blocks: Rule ID, File Path, Start Line, End Line (optional), and Code/Context
-    // Example format: rule-id at path/to/file.js:14-16
-    const blockRegex = /^(\S+)\s+at\s+([\w\/\.-]+):(\d+)(?:-(\d+))?\n([\s\S]*?)(?=\n\S+\s+at\s+|$)/gm;
-    // Groups: 1: Rule ID, 2: File Path, 3: Start Line, 4: End Line (optional), 5: Code/Context
+    // Regex to capture blocks based on your provided data structure:
+    // 1. Rule ID (e.g., semgrep_rules.nosql-injection-rule)
+    // 2. File Path (e.g., routes/authRoutes.js)
+    // 3. Message/Description (The entire block of text between the rule ID and the first line number)
+    // 4. The entire Code Block (all lines starting with digits and potential separators)
+    const blockRegex = /\n\s*(\S+\.js)\n\s*❯❯❱\s*(\S+)\n([\s\S]*?)(?=\n\s*\S+\.js\n|\n\s*┌)/gm;
 
     while ((match = blockRegex.exec(rawText)) !== null) {
-        // Avoid infinite loops for zero-width matches
+        // Avoid infinite loops
         if (match.index === blockRegex.lastIndex) {
             blockRegex.lastIndex++;
         }
 
-        const [fullMatch, ruleId, filePath, startLine, endLine, contextBlock] = match;
+        const [fullMatch, filePath, ruleId, messageAndCodeBlock] = match;
 
-        // The exact message is often difficult to extract cleanly from --text, 
-        // so we use the Rule ID as a placeholder/message.
-        const message = `Rule ID: ${ruleId}`; 
+        // Split the captured block into message and code lines
+        const lines = messageAndCodeBlock.trim().split('\n');
         
-        // Clean up the code context block from leading symbols ('>', '|', spaces)
-        const codeString = (contextBlock || '').split('\n')
-            .map(line => line.replace(/^\s*[|>]\s*/, '').trim())
-            .filter(line => line.length > 0)
-            .join('\n');
+        let message = '';
+        let codeLines = [];
+        let firstLine = null;
+
+        // Iterate lines to separate the textual message from the code block
+        for (const line of lines) {
+            // A line is part of the code block if it starts with digits (e.g., '16┆') or a code separator ('⋮┆---')
+            if (line.match(/^\s*\d+┆/) || line.match(/^\s*⋮┆/)) {
+                codeLines.push(line.trim());
+                // Capture the starting line number for the GitHub link
+                if (!firstLine && line.match(/^\s*(\d+)┆/)) {
+                    firstLine = line.match(/^\s*(\d+)┆/)[1];
+                }
+            } else {
+                // If it's not code, it's part of the message/description
+                message += line.trim() + ' ';
+            }
+        }
+        
+        // Clean up and format code block
+        const codeString = codeLines.map(line => 
+            // Remove line numbers, separators, and leading/trailing spaces
+            line.replace(/^\d+┆\s*/, '')
+                .replace(/^⋮┆-+\s*/, '')
+                .trim()
+        ).filter(line => line.length > 0).join('\n');
+        
+        // Final message cleanup
+        const cleanMessage = message.trim();
+        
+        // We use the first line number found for the GitHub link
+        const startLine = firstLine || '1';
+
 
         findings.push({
             ruleId: ruleId || 'N/A',
             filePath: filePath || 'N/A',
-            message: message, 
-            codeString: codeString.trim(),
+            message: cleanMessage, 
+            codeString: codeString,
             line: startLine,
         });
     }
@@ -76,34 +105,35 @@ const hasIssues = findings.length > 0;
 const mdRow = (finding) => {
     // Form the link to the file for the PR
     const githubLink = `${finding.filePath}#L${finding.line}`;
+    
+    // Use the actual rule ID as the message if the message is empty/just the rule ID itself.
+    const displayMessage = finding.message || `Possible issue found by rule \`${finding.ruleId}\`.`;
 
     return [
         `**File:** [${finding.filePath}:${finding.line}](${githubLink})`,
         `**Rule:** \`${finding.ruleId}\``,
-        `**Message:** ${finding.message}`,
+        `**Message:** ${displayMessage}`,
         `**Code strings:**`,
-        '```',
+        '```javascript', // Using 'javascript' for better syntax highlighting
         finding.codeString || 'N/A',
         '```',
-        `---` // Horizontal line to separate results
+        `\n---` // Separator
     ].join('\n');
 };
 
 // --- Create Markdown Body ---
 
 const header = hasIssues
-    ? `## ⚠️ Semgrep found ${findings.length} potential issues (TXT Report)`
+    ? `## 🔴 Semgrep found ${findings.length} issues in the codebase (TXT Report)`
     : `## ✅ Semgrep: No issues found in TXT Report`;
 
 const details = findings.length > 0
-    ? findings.map(mdRow).join('\n')
+    ? findings.map(mdRow).join('') // Join with empty string since mdRow already adds a separator
     : 'TXT report is clean.';
 
 
 const body = [
     header,
-    '',
-    findings.length > 0 ? '---' : '', // Separator only if there are findings
     '',
     details
 ].join('\n');
@@ -117,5 +147,4 @@ fs.writeFileSync(process.env.GITHUB_OUTPUT, output, { flag: 'a' });
 
 console.log(`Markdown report written to ${OUTPUT_FILE}`);
 console.log(`has_issues=${hasIssues}`);
-
 
