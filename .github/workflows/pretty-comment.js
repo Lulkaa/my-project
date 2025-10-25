@@ -59,7 +59,7 @@ function parseSemgrepTxt(rawText) {
         ).filter(line => line.length > 0).join('\n');
         
         // Final message cleanup
-        // 🚩 FIXED LINE: Corrected the regular expression syntax.
+        // 🚩 CORRECTED REGEX SYNTAX: /\/g
         const cleanMessage = message.trim().replace(/\/g, '').trim(); 
         
         // We use the first line number found for the GitHub link
