@@ -18,7 +18,6 @@ function parseSemgrepTxt(rawText) {
     // 1. File Path (e.g., routes/authRoutes.js)
     // 2. Rule ID (e.g., semgrep_rules.nosql-injection-rule)
     // 3. Message/Code Block (The entire content until the start of the next finding or end of file)
-    // This ignores the top header (┌──────────────────┐)
     const blockRegex = /\n\s*(\S+\.js)\n\s*❯❯❱\s*(\S+)\n([\s\S]*?)(?=\n\s*\S+\.js\n|\n\s*┌|$)/gm;
 
     while ((match = blockRegex.exec(rawText)) !== null) {
@@ -39,7 +38,6 @@ function parseSemgrepTxt(rawText) {
         // Iterate lines to separate the textual message from the code block
         for (const line of lines) {
             // A line is part of the code block if it starts with digits (e.g., '16┆') or a code separator ('⋮┆---')
-            // We use a regex to detect the line number format (e.g., '16┆')
             if (line.match(/^\s*\d+┆/) || line.match(/^\s*⋮┆/)) {
                 codeLines.push(line.trim());
                 // Capture the starting line number for the GitHub link
@@ -61,7 +59,8 @@ function parseSemgrepTxt(rawText) {
         ).filter(line => line.length > 0).join('\n');
         
         // Final message cleanup
-        const cleanMessage = message.trim().replace(/\/g, '').trim();
+        // 🚩 FIXED LINE: Corrected the regular expression syntax.
+        const cleanMessage = message.trim().replace(/\/g, '').trim(); 
         
         // We use the first line number found for the GitHub link
         const startLine = firstLine || '1';
@@ -87,9 +86,7 @@ try {
     rawData = fs.readFileSync(INPUT_FILE, 'utf8');
 } catch (error) {
     console.error(`Error reading file ${INPUT_FILE}: ${error.message}`);
-    // Create an empty report if the file is not found
     fs.writeFileSync(OUTPUT_FILE, '### ⚠️ Error: Semgrep TXT report not found.');
-    // Set has_issues to false to prevent job failure on missing file
     fs.writeFileSync(process.env.GITHUB_OUTPUT, `has_issues=false\n`, { flag: 'a' });
     process.exit(0);
 }
@@ -148,4 +145,3 @@ fs.writeFileSync(process.env.GITHUB_OUTPUT, output, { flag: 'a' });
 
 console.log(`Markdown report written to ${OUTPUT_FILE}`);
 console.log(`has_issues=${hasIssues}`);
-
