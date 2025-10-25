@@ -82,9 +82,9 @@ jobs:
               `📎 [Download Semgrep TXT & JSON report here](${runUrl})`,
               '### Semgrep Scan Report Results',
               '',
-              '```txt',
+              
               report,
-              '```',
+              
               ].join('\n');
 
               await github.rest.issues.createComment({
