@@ -6,7 +6,7 @@ const OUTPUT_FILE = 'pretty-comment1.md'; // The file your GitHub Action step re
 
 /**
  * Parses Semgrep TXT output and returns a list of finding objects.
- * This regex is specifically tuned for Semgrep output format including code lines.
+ * This regex is specifically tuned for the provided Semgrep output format (File/Rule/Message/Code blocks).
  * @param {string} rawText - The raw content of the Semgrep TXT file.
  * @returns {Array<object>} List of findings.
  */
@@ -14,12 +14,12 @@ function parseSemgrepTxt(rawText) {
     const findings = [];
     let match;
 
-    // Regex to capture blocks based on your provided data structure:
-    // 1. Rule ID (e.g., semgrep_rules.nosql-injection-rule)
-    // 2. File Path (e.g., routes/authRoutes.js)
-    // 3. Message/Description (The entire block of text between the rule ID and the first line number)
-    // 4. The entire Code Block (all lines starting with digits and potential separators)
-    const blockRegex = /\n\s*(\S+\.js)\n\s*❯❯❱\s*(\S+)\n([\s\S]*?)(?=\n\s*\S+\.js\n|\n\s*┌)/gm;
+    // Regex to capture blocks:
+    // 1. File Path (e.g., routes/authRoutes.js)
+    // 2. Rule ID (e.g., semgrep_rules.nosql-injection-rule)
+    // 3. Message/Code Block (The entire content until the start of the next finding or end of file)
+    // This ignores the top header (┌──────────────────┐)
+    const blockRegex = /\n\s*(\S+\.js)\n\s*❯❯❱\s*(\S+)\n([\s\S]*?)(?=\n\s*\S+\.js\n|\n\s*┌|$)/gm;
 
     while ((match = blockRegex.exec(rawText)) !== null) {
         // Avoid infinite loops
@@ -29,7 +29,7 @@ function parseSemgrepTxt(rawText) {
 
         const [fullMatch, filePath, ruleId, messageAndCodeBlock] = match;
 
-        // Split the captured block into message and code lines
+        // Split the captured block into lines
         const lines = messageAndCodeBlock.trim().split('\n');
         
         let message = '';
@@ -39,6 +39,7 @@ function parseSemgrepTxt(rawText) {
         // Iterate lines to separate the textual message from the code block
         for (const line of lines) {
             // A line is part of the code block if it starts with digits (e.g., '16┆') or a code separator ('⋮┆---')
+            // We use a regex to detect the line number format (e.g., '16┆')
             if (line.match(/^\s*\d+┆/) || line.match(/^\s*⋮┆/)) {
                 codeLines.push(line.trim());
                 // Capture the starting line number for the GitHub link
@@ -60,7 +61,7 @@ function parseSemgrepTxt(rawText) {
         ).filter(line => line.length > 0).join('\n');
         
         // Final message cleanup
-        const cleanMessage = message.trim();
+        const cleanMessage = message.trim().replace(/\/g, '').trim();
         
         // We use the first line number found for the GitHub link
         const startLine = firstLine || '1';
@@ -110,6 +111,7 @@ const mdRow = (finding) => {
     const displayMessage = finding.message || `Possible issue found by rule \`${finding.ruleId}\`.`;
 
     return [
+        `\n---`, // Separator before each finding
         `**File:** [${finding.filePath}:${finding.line}](${githubLink})`,
         `**Rule:** \`${finding.ruleId}\``,
         `**Message:** ${displayMessage}`,
@@ -117,7 +119,6 @@ const mdRow = (finding) => {
         '```javascript', // Using 'javascript' for better syntax highlighting
         finding.codeString || 'N/A',
         '```',
-        `\n---` // Separator
     ].join('\n');
 };
 
@@ -127,14 +128,14 @@ const header = hasIssues
     ? `## 🔴 Semgrep found ${findings.length} issues in the codebase (TXT Report)`
     : `## ✅ Semgrep: No issues found in TXT Report`;
 
+// Note: We use .join('') because mdRow now includes the starting separator '---'
 const details = findings.length > 0
-    ? findings.map(mdRow).join('') // Join with empty string since mdRow already adds a separator
-    : 'TXT report is clean.';
+    ? findings.map(mdRow).join('') 
+    : '\nTXT report is clean.';
 
 
 const body = [
     header,
-    '',
     details
 ].join('\n');
 
