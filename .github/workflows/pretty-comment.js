@@ -1,234 +1,131 @@
-const fs = require("fs");
-const path = "./semgrep_scan_results.txt";
+Absolutely\! Here is the requested script translated entirely into English.
 
-if (!fs.existsSync(path)) {
-  console.error(`Input file not found: ${path}`);
-  process.exit(1);
-}
+This script, named `pretty-comment.js`, reads the **Semgrep JSON** report, filters for high-impact issues, converts the findings into **Markdown** format, and sets an output variable for your GitHub Actions workflow.
 
-const raw = fs.readFileSync(path, "utf8");
+## pretty-comment.js (English Version)
 
-/* -------------------- Utils -------------------- */
+```javascript
+const fs = require('fs');
+const path = require('path');
 
-// Розкодувати можливі HTML-ентіті з джерела
-function htmlUnescape(s) {
-  return s
-    .replace(/&nbsp;/g, " ")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&");
-}
+// Input and output file names
+const INPUT_FILE = 'semgrep_scan_results.json';
+const OUTPUT_FILE = 'pretty-comment1.md'; // Matches the file in your workflow
 
-const lines = htmlUnescape(raw).split(/\r?\n/);
-
-// прибираємо декоративні розділювачі з message
-const WALL_RE = /(?:^|\s)⋮┆[-─—–]{4,}(?:\s|$)/g;
-
-// нормалізуємо «  .» -> «.» та зайві пробіли
-function normalizeMessage(s) {
-  return s
-    .replace(WALL_RE, " ")
-    .replace(/\s+\./g, ".")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function normalizeNumbered(line) {
-  // зберігаємо лідируючий "16┆ " тощо, але чистимо трейлінг-пробіли
-  return line.replace(/^\s+(\d+┆\s*)/, "$1").trimEnd();
-}
-
-function mdEscapeInline(s) {
-  // легкий ескейп для інлайнів (таблиці/заголовки не ламаємо)
-  return s.replace(/[|*_`]/g, (m) => "\\" + m);
-}
-
-/* -------------------- Парсер -------------------- */
-
-const findings = [];
-let current = null;
-let captureMessage = [];
-
-const fileLineRe =
-  /^\s*(?:\*\*File:\*\*\s*)?([^\s].*?\.(?:js|ts|jsx|tsx|py|java|go|rb))\s*$/i;
-
-const numberedLineRe = /^\s*(\d+┆\s*)(.*)$/;
-
-const interestingCodeRe =
-  /(const\s+regex\s*=\s*new\s+RegExp)|\b(Nested regex|vulnerable to backtracking|ReDoS)\b/i;
-
-const ruleMarkers = [
-  /^.*❯❯❱\s*(.+)$/, // "❯❯❱ semgrep_rules.something"
-  /^\s*javascript\.[\w.-]+$/, // "javascript.lang.security...."
-  /^\s*[a-z0-9_.-]+-rule\s*$/i,
-  /^\s*semgrep[\w\W]*rule.*$/i,
-  /^\s*\*\*Rule:\*\*\s*(.+)$/i, // підтримка вже відформатованих блоків
-];
-
-function isRuleLine(line) {
-  const t = line.trim();
-  return ruleMarkers.some((re) => re.test(t));
-}
-function extractRule(line) {
-  let m = line.match(/^.*❯❯❱\s*(.+)$/);
-  if (m) return m[1].trim();
-  m = line.match(/^\s*\*\*Rule:\*\*\s*(.+)$/i);
-  if (m) return m[1].trim();
-  return line.trim();
-}
-
-for (const rawLine of lines) {
-  const line = rawLine ?? "";
-
-  // новий блок файлу
-  const fileMatch = line.match(fileLineRe);
-  if (fileMatch) {
-    if (current) {
-      current.message = normalizeMessage(captureMessage.join(" "));
-      findings.push(current);
+/**
+ * Converts severity level into an emoji and text for better visualization.
+ * @param {string} severity - Semgrep severity level (ERROR, WARNING, INFO).
+ * @returns {string} Formatted string.
+ */
+const formatSeverity = (severity) => {
+    switch (severity.toUpperCase()) {
+        case 'ERROR':
+            return '🔴 **CRITICAL**';
+        case 'WARNING':
+            return '🟠 **MEDIUM**';
+        case 'INFO':
+            return '🟡 **INFO**';
+        default:
+            return `⚪️ **${severity.toUpperCase()}**`;
     }
-    current = {
-      file: fileMatch[1].trim(),
-      rule: "",
-      message: "",
-      codeLines: [],
-    };
-    captureMessage = [];
-    continue;
-  }
+};
 
-  if (!current) continue;
+/**
+ * Generates a Markdown string for a single scan finding.
+ * @param {object} finding - A single finding object from the Semgrep JSON report.
+ * @returns {string} Markdown string.
+ */
+const mdRow = (finding) => {
+    const severity = formatSeverity(finding.extra.severity);
+    const message = finding.extra.message.trim();
+    const ruleId = finding.extra.metadata.id || finding.check_id;
+    const filePath = finding.path;
+    const line = finding.start.line;
+    const endLine = finding.end.line;
+    
+    // Link to the file and line in GitHub (works in PR context)
+    // Assumes the action runs within the repo context to correctly form a relative path link.
+    const githubLink = `${filePath}#L${line}`; 
+    
+    // Create a code block to show the vulnerable line(s)
+    const codeSnippet = finding.extra.lines ? 
+        `\`\`\`\n${finding.extra.lines.trim()}\n\`\`\`` :
+        '';
 
-  // Rule у окремому полі
-  if (!current.rule && isRuleLine(line)) {
-    current.rule = extractRule(line);
-    continue;
-  }
-
-  // рядки коду з нумерацією
-  if (numberedLineRe.test(line)) {
-    current.codeLines.push(normalizeNumbered(line));
-    continue;
-  }
-
-  // «цікаві» рядки коду без нумерації
-  if (interestingCodeRe.test(line)) {
-    current.codeLines.push(line.trim());
-    continue;
-  }
-
-  // все інше — у Message
-  if (line.trim() !== "") captureMessage.push(line.trim());
-}
-
-// фіналізуємо останній блок
-if (current) {
-  current.message = normalizeMessage(captureMessage.join(" "));
-  findings.push(current);
-}
-
-/* -------------------- Форматування Markdown -------------------- */
-
-const hasFindings = findings.length > 0;
-
-// Підрахунки для summary
-const byRule = new Map();
-const byFile = new Map();
-
-for (const f of findings) {
-  const rule = f.rule || "(unknown rule)";
-  byRule.set(rule, (byRule.get(rule) || 0) + 1);
-  byFile.set(f.file, (byFile.get(f.file) || 0) + 1);
-}
-
-function renderSummaryTable(title, map, sortDesc = true) {
-  const entries = Array.from(map.entries());
-  entries.sort((a, b) =>
-    sortDesc ? b[1] - a[1] || a[0].localeCompare(b[0]) : a[0].localeCompare(b[0])
-  );
-  if (!entries.length) return "";
-  const rows = entries
-    .map(([k, v]) => `| ${mdEscapeInline(k)} | ${v} |`)
-    .join("\n");
-  return [
-    `#### ${title}`,
-    "",
-    "| Item | Findings |",
-    "|---|---:|",
-    rows,
-    "",
-  ].join("\n");
-}
-
-function renderCodeBlock(codeLines) {
-  if (!codeLines?.length) return "_(no code)_";
-  // Виводимо як ```text, щоб зберегти «16┆ const ...»
-  const body = codeLines.join("\n");
-  return [
-    "<details>",
-    "<summary><strong>Show code</strong></summary>",
-    "",
-    "```text",
-    body,
-    "```",
-    "",
-    "</details>",
-  ].join("\n");
-}
-
-const now = new Date();
-const header = `# 🛡️ Semgrep Report
-
-**Scanned:** ${now.toISOString().replace("T", " ").replace(/\.\d+Z$/, " UTC")}  
-**Total findings:** ${findings.length}
-
-> This comment is auto-generated from \`semgrep_scan_results.txt\`.  
-> Messages are normalized to remove decorative separators and spacing artifacts.
-`;
-
-const summary =
-  renderSummaryTable("By Rule", byRule) + renderSummaryTable("By File", byFile);
-
-const body = findings
-  .map((f, idx) => {
-    const ruleBadge = f.rule ? "`" + f.rule + "`" : "`(unknown rule)`";
-    const message = f.message || "(no description)";
     return [
-      `## ${idx + 1}. ${f.file}`,
-      `**Rule:** ${ruleBadge}`,
-      "",
-      `> ${message}`,
-      "",
-      renderCodeBlock(f.codeLines),
-      "",
-    ].join("\n");
-  })
-  .join("\n");
+        `### ${severity}: \`${ruleId}\``,
+        `> **File:** [${filePath}:${line}-${endLine}](${githubLink})`,
+        `> **Description:** ${message}`,
+        codeSnippet,
+        `---` // Horizontal line to separate results
+    ].join('\n');
+};
 
-const output = [
-  header,
-  hasFindings ? summary : "✅ No findings. Great job!",
-  hasFindings ? "---\n" + body : "",
-].join("\n");
-
-fs.writeFileSync("pretty-comment1.md", output, "utf8");
-console.log("Wrote pretty-comment1.md");
-
-/* -------------------- GITHUB_OUTPUT -------------------- */
+let rawData;
 try {
-  const ghOut = process.env.GITHUB_OUTPUT;
-  const line = `has_findings=${hasFindings}\n`;
-  if (ghOut) {
-    fs.writeFileSync(ghOut, line, { flag: "a" });
-  } else {
-    fs.writeFileSync("./github_output.txt", line, { flag: "a" });
-  }
-} catch (e) {
-  console.warn("Could not write to GITHUB_OUTPUT:", e.message);
+    rawData = fs.readFileSync(INPUT_FILE, 'utf8');
+} catch (error) {
+    console.error(`Error reading file ${INPUT_FILE}: ${error.message}`);
+    // Create an empty report if the file is not found
+    fs.writeFileSync(OUTPUT_FILE, '### ⚠️ Error: Semgrep JSON report not found.');
+    // Set has_issues to false to prevent job failure on missing file
+    fs.writeFileSync(process.env.GITHUB_OUTPUT, `has_issues=false\n`, { flag: 'a' });
+    process.exit(0);
 }
 
-console.log(`has_findings=${hasFindings}`);
+let parsed;
+try {
+    parsed = JSON.parse(rawData);
+} catch (error) {
+    console.error(`Error parsing JSON from file ${INPUT_FILE}: ${error.message}`);
+    fs.writeFileSync(OUTPUT_FILE, '### ⚠️ Error: Failed to parse Semgrep JSON.');
+    fs.writeFileSync(process.env.GITHUB_OUTPUT, `has_issues=false\n`, { flag: 'a' });
+    process.exit(0);
+}
+
+// Filter results. Semgrep names them "results"
+const findings = Array.isArray(parsed.results) ? parsed.results : [];
+
+// Consider only "ERROR" and "WARNING" as "Issues"
+const isHighImpact = (finding) => 
+    finding.extra.severity === 'ERROR' || finding.extra.severity === 'WARNING';
+
+const hasIssues = findings.some(isHighImpact);
+
+const highImpactFindings = findings.filter(isHighImpact);
+
+// Sort: ERROR > WARNING > INFO
+const sortedFindings = findings.sort((a, b) => {
+    const severityOrder = { 'ERROR': 1, 'WARNING': 2, 'INFO': 3 };
+    return severityOrder[a.extra.severity] - severityOrder[b.extra.severity];
+});
+
+// --- Create Markdown Body ---
+
+const header = hasIssues
+    ? `## 🔴 Semgrep found ${highImpactFindings.length} **Critical/Medium** vulnerabilities`
+    : `## ✅ Semgrep: **No Critical/Medium** vulnerabilities found`;
+
+const details = sortedFindings.length > 0
+    ? sortedFindings.map(mdRow).join('\n')
+    : 'No issues found.';
 
 
-console.log(`has_findings=${hasFindings}`);
+const body = [
+    header,
+    '',
+    sortedFindings.length > 0 ? '---' : '',
+    '',
+    details
+].join('\n');
 
+// Write the Markdown file
+fs.writeFileSync(OUTPUT_FILE, body);
+
+// Set the has_issues variable for the "Fail if issues present" step
+const output = `has_issues=${hasIssues}\n`;
+fs.writeFileSync(process.env.GITHUB_OUTPUT, output, { flag: 'a' });
+
+console.log(`Markdown report written to ${OUTPUT_FILE}`);
+console.log(`has_issues=${hasIssues}`);
+```
