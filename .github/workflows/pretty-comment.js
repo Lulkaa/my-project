@@ -19,6 +19,7 @@ function parseSemgrepTxt(rawText) {
     const blockRegex = /^(\S+)\s+at\s+([\w\/\.-]+):(\d+)(?:-(\d+))?\n([\s\S]*?)(?=\n\S+\s+at\s+|$)/gm;
     // Groups: 1: Rule ID, 2: File Path, 3: Start Line, 4: End Line (optional), 5: Code/Context
 
+    
     while ((match = blockRegex.exec(rawText)) !== null) {
         // Avoid infinite loops for zero-width matches
         if (match.index === blockRegex.lastIndex) {
