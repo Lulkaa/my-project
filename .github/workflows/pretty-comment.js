@@ -27,6 +27,7 @@ function parseSemgrepTxt(rawText) {
             blockRegex.lastIndex++;
         }
 
+        
         const [fullMatch, filePath, ruleId, messageAndCodeBlock] = match;
 
         // Split the captured block into message and code lines
