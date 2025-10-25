@@ -23,6 +23,7 @@ const formatSeverity = (severity) => {
     }
 };
 
+
 /**
  * Generates a Markdown string for a single scan finding.
  * @param {object} finding - A single finding object from the Semgrep JSON report.
