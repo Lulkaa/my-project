@@ -21,6 +21,7 @@ function parseSemgrepTxt(rawText) {
     // This ignores the top header (┌──────────────────┐)
     const blockRegex = /\n\s*(\S+\.js)\n\s*❯❯❱\s*(\S+)\n([\s\S]*?)(?=\n\s*\S+\.js\n|\n\s*┌|$)/gm;
 
+    
     while ((match = blockRegex.exec(rawText)) !== null) {
         // Avoid infinite loops
         if (match.index === blockRegex.lastIndex) {
