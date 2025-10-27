@@ -25,6 +25,7 @@ for (let i = 0; i < lines.length; i++) {
     };
     continue;
   }
+
   
   // Detect rule (line with ❯❯❱)
   if (line.includes('❯❯❱') && currentFinding) {
