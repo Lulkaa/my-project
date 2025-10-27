@@ -19,6 +19,7 @@ rules:
           router.$METHOD(...,..., ($REQ, $RES) => {
             ...
           })
+          
     pattern-either:
       - pattern: |
           const $USER = await $MODEL.findOne({...,$PARAM1,$PARAM2,...})
