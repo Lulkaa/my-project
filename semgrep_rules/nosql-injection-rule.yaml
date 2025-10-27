@@ -21,7 +21,6 @@ rules:
       technology:
         - express
         - mongoose
-      confidence: MEDIUM
     patterns:
       - pattern-either:
           - pattern-inside: |
