@@ -134,7 +134,7 @@ rules:
             - pattern: req.params
             - pattern: req.query
 
-  - id: nosql-injection-auth-bypass-findone
+- id: nosql-injection-auth-bypass-findone
     message: >
       CRITICAL: Authentication bypass via NoSQL Injection in findOne(). Username and password 
       from request are used directly in authentication query. An attacker can send 
@@ -160,28 +160,21 @@ rules:
                 ...
               })
       - pattern-either:
-          - patterns:
-              - pattern-inside: |
-                  const { $USERNAME, $PASSWORD } = $INPUT;
-                  ...
-              - pattern: await $MODEL.findOne({ $USERNAME, $PASSWORD })
-              - metavariable-pattern:
-                  metavariable: $INPUT
-                  pattern-either:
-                    - pattern: req.body
-                    - pattern: req.params
-                    - pattern: req.query
-          - patterns:
-              - pattern-inside: |
-                  const { $U, $P } = $INPUT;
-                  ...
-              - pattern: await $MODEL.findOne({ username: $U, password: $P })
-              - metavariable-pattern:
-                  metavariable: $INPUT
-                  pattern-either:
-                    - pattern: req.body
-                    - pattern: req.params
-                    - pattern: req.query
+          - pattern-inside: |
+              const { $USERNAME, $PASSWORD } = $INPUT;
+              ...
+          - pattern-inside: |
+              const { $U, $P } = $INPUT;
+              ...
+      - pattern-either:
+          - pattern: await $MODEL.findOne({ $USERNAME, $PASSWORD })
+          - pattern: await $MODEL.findOne({ username: $U, password: $P })
+      - metavariable-pattern:
+          metavariable: $INPUT
+          pattern-either:
+            - pattern: req.body
+            - pattern: req.params
+            - pattern: req.query
 
   - id: nosql-injection-regexp-user-input
     message: >
