@@ -16,7 +16,7 @@ rules:
         - https://owasp.org/Top10/A03_2021-Injection/
       category: security
     pattern-inside: |
-      router.$METHOD(...,..., ($REQ, $RES) => {
+      router.$METHOD(...,..., async ($REQ, $RES) => {
         ...
       })
     pattern-either:
