@@ -1,4 +1,5 @@
 rules:
+
   - id: nosql-injection-findone-multi-params
     message: >
       NoSQL Injection in findOne() query. Multiple user-supplied parameters from request are passed 
