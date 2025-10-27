@@ -165,17 +165,23 @@ rules:
                   const { $USERNAME, $PASSWORD } = $INPUT;
                   ...
               - pattern: await $MODEL.findOne({ $USERNAME, $PASSWORD })
+              - metavariable-pattern:
+                  metavariable: $INPUT
+                  pattern-either:
+                    - pattern: req.body
+                    - pattern: req.params
+                    - pattern: req.query
           - patterns:
               - pattern-inside: |
                   const { $U, $P } = $INPUT;
                   ...
               - pattern: await $MODEL.findOne({ username: $U, password: $P })
-      - metavariable-pattern:
-          metavariable: $INPUT
-          pattern-either:
-            - pattern: req.body
-            - pattern: req.params
-            - pattern: req.query
+              - metavariable-pattern:
+                  metavariable: $INPUT
+                  pattern-either:
+                    - pattern: req.body
+                    - pattern: req.params
+                    - pattern: req.query
 
   - id: nosql-injection-regexp-user-input
     message: >
