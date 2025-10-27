@@ -14,28 +14,31 @@ rules:
       references:
        - https://owasp.org/Top10/A03_2021-Injection/
       category: security
-    mode: taint
-    pattern-inside:
+     pattern-inside:
       - pattern: |
-          router.$METHOD(..., ($REQ, $RES) => {
+          router.$METHOD(...,..., ($REQ, $RES) => {
             ...
           })
-    pattern-sources:
-      - pattern: $REQ.body
-      - pattern: $REQ.query
-      - pattern: $REQ.params
-    pattern-sinks:
-      - pattern: $MODEL.find($ARG)
-      - pattern: $MODEL.findOne($ARG)
-      - pattern: $MODEL.findById($ARG)
-      - pattern: $MODEL.aggregate($ARG)
-      - pattern: $MODEL.updateOne($ARG, ...)
-      - pattern: $MODEL.updateMany($ARG, ...)
-      - pattern: $MODEL.replaceOne($ARG, ...)
-      - pattern: $MODEL.deleteOne($ARG)
-      - pattern: $MODEL.deleteMany($ARG)
-      - pattern: $MODEL.findOneAndUpdate($Q, $UPD, ...)
-      - pattern: $MODEL.findByIdAndUpdate($ID, $UPD, ...)
-      - pattern: new $MODEL($DOC)
-      - pattern: $MODEL.create($DOC)
-      - pattern: $DOC.save(...)
+    pattern-either:
+      - pattern: |
+          const $USER = await $MODEL.findOne({...,$PARAM1,$PARAM2,...})
+      - pattern: | 
+          const $PACKAGE = new $PAC($INPUT) 
+      - pattern: |
+          $U = $INPUT;
+          ...
+          $MODEL.findOneAndUpdate($FILT, $U, ...)
+      - pattern: |
+          const { $VAL, ... } = $INPUT;
+          ...
+          $MODEL.findOneAndUpdate($FILT, { $VAL, ... }, ...)
+      - pattern: |
+          const { $VAL, ... } = $INPUT;
+          ...
+          $MODEL.findOneAndUpdate($FILT, { $KEY: $VAL, ... }, ...)
+    metavariable-pattern:
+      metavariable: $INPUT 
+      patterns:
+            - pattern: req.body
+            - pattern: req.params
+            - pattern: req.query
