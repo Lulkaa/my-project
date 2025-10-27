@@ -10,6 +10,7 @@ let currentFinding = null;
 
 for (let i = 0; i < lines.length; i++) {
   const line = lines[i];
+
   
   // Detect new file (4 spaces + file path)
   if (line.match(/^    [a-zA-Z]/) && !line.includes('❯❯❱')) {
