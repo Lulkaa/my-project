@@ -17,7 +17,7 @@ rules:
       category: security
     patterns:
       - pattern-inside: |
-          router.$METHOD(...,..., ($REQ, $RES) => {
+          router.$METHOD(...,..., async ($REQ, $RES) => {
             ...
           })
       - pattern-either:
