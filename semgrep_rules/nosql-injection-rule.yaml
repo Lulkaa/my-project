@@ -15,30 +15,31 @@ rules:
       references:
         - https://owasp.org/Top10/A03_2021-Injection/
       category: security
-    pattern-inside: |
-      router.$METHOD(..., async ($REQ, $RES) => {
-        ...
-      })
-    pattern-either:
-      - pattern: |
-          const $USER = await $MODEL.findOne({...,$PARAM1,$PARAM2,...})
-      - pattern: |
-          const $PACKAGE = new $PAC($INPUT)
-      - pattern: |
-          $U = $INPUT;
-          ...
-          $MODEL.findOneAndUpdate($FILT, $U, ...)
-      - pattern: |
-          const { $VAL, ... } = $INPUT;
-          ...
-          $MODEL.findOneAndUpdate($FILT, { $VAL, ... }, ...)
-      - pattern: |
-          const { $VAL, ... } = $INPUT;
-          ...
-          $MODEL.findOneAndUpdate($FILT, { $KEY: $VAL, ... }, ...)
-    metavariable-pattern:
-      metavariable: $INPUT
-      patterns:
-        - pattern: req.body
-        - pattern: req.params
-        - pattern: req.query
+    patterns:
+      - pattern-inside: |
+          router.$METHOD(..., async ($REQ, $RES) => {
+            ...
+          })
+      - pattern-either:
+          - pattern: |
+              const $USER = await $MODEL.findOne({...,$PARAM1,$PARAM2,...})
+          - pattern: |
+              const $PACKAGE = new $PAC($INPUT)
+          - pattern: |
+              $U = $INPUT;
+              ...
+              $MODEL.findOneAndUpdate($FILT, $U, ...)
+          - pattern: |
+              const { $VAL, ... } = $INPUT;
+              ...
+              $MODEL.findOneAndUpdate($FILT, { $VAL, ... }, ...)
+          - pattern: |
+              const { $VAL, ... } = $INPUT;
+              ...
+              $MODEL.findOneAndUpdate($FILT, { $KEY: $VAL, ... }, ...)
+      - metavariable-pattern:
+          metavariable: $INPUT
+          pattern-either:
+            - pattern: req.body
+            - pattern: req.params
+            - pattern: req.query
