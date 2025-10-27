@@ -25,6 +25,7 @@ rules:
               })
       - pattern: |
           const $USER = await $MODEL.findOne({...,$PARAM1,$PARAM2,...})
+          
 
   - id: nosql-injection-model-constructor
     message: |
