@@ -41,13 +41,13 @@ jobs:
         run: |
           semgrep \
              --config "p/r2c-security-audit"  \
-             --config "semgrep_rules/nosql-pack-rule.yaml" \
+             --config "semgrep_rules/nosql-pack-rule.yml" \
              --json --output semgrep_scan_results.json || true 
           
            
              semgrep \
              --config "p/r2c-security-audit"  \
-             --config "semgrep_rules/nosql-pack-rule.yaml" \
+             --config "semgrep_rules/nosql-pack-rule.yml" \
              --text --output semgrep_scan_results.txt || true
       
       - name: Report output (json)
