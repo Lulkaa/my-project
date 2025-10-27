@@ -1,29 +1,29 @@
 rules:
   - id: nosql-injection-rule
-    message: Possible NoSQL Injection. Unvalidated user input is used directly
-             inside a MongoDB query . This allows attackers to inject query operators (e.g. `$ne`, `$gt`, `$where`)
-             and bypass authentication or access unauthorized data. Validate and sanitize input before using it in database queries, 
-             and avoid passing raw request objects to Mongoose methods.
+    message: >
+      Possible NoSQL Injection. Unvalidated user input is used directly
+      inside a MongoDB query. This allows attackers to inject query operators (e.g. `$ne`, `$gt`, `$where`)
+      and bypass authentication or access unauthorized data. Validate and sanitize input before using it in database queries,
+      and avoid passing raw request objects to Mongoose methods.
     languages:
       - javascript
-    severity: HIGH
+    severity: ERROR
     metadata:
       cwe: "CWE-932 Improper Neutralization of Special Elements in Data Query Logic"
       owasp:
-       - A03:2021 - Injection
+        - "A03:2021 - Injection"
       references:
-       - https://owasp.org/Top10/A03_2021-Injection/
+        - https://owasp.org/Top10/A03_2021-Injection/
       category: security
-     pattern-inside:
-      - pattern: |
-          router.$METHOD(...,..., ($REQ, $RES) => {
-            ...
-          })
+    pattern-inside: |
+      router.$METHOD(...,..., ($REQ, $RES) => {
+        ...
+      })
     pattern-either:
       - pattern: |
           const $USER = await $MODEL.findOne({...,$PARAM1,$PARAM2,...})
-      - pattern: | 
-          const $PACKAGE = new $PAC($INPUT) 
+      - pattern: |
+          const $PACKAGE = new $PAC($INPUT)
       - pattern: |
           $U = $INPUT;
           ...
@@ -37,8 +37,8 @@ rules:
           ...
           $MODEL.findOneAndUpdate($FILT, { $KEY: $VAL, ... }, ...)
     metavariable-pattern:
-      metavariable: $INPUT 
+      metavariable: $INPUT
       patterns:
-            - pattern: req.body
-            - pattern: req.params
-            - pattern: req.query
+        - pattern: req.body
+        - pattern: req.params
+        - pattern: req.query
