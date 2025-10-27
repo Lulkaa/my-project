@@ -41,13 +41,13 @@ jobs:
         run: |
           semgrep \
              --config "p/r2c-security-audit"  \
-             --config "semgrep_rules/nosql-pack-rule.yml" \
+             --config "semgrep_rules/nosql-pack-rule.yaml" \
              --json --output semgrep_scan_results.json || true 
           
            
              semgrep \
              --config "p/r2c-security-audit"  \
-             --config "semgrep_rules/nosql-pack-rule.yml" \
+             --config "semgrep_rules/nosql-pack-rule.yaml" \
              --text --output semgrep_scan_results.txt || true
       
       - name: Report output (json)
@@ -97,6 +97,6 @@ jobs:
       - name: Fail if issues present
         if: steps.parse.outputs.has_issues == 'true'
         run: |
-          echo "High/Medium/Critical vulnerabilities were found. Failing the job."
+          echo "Failing the job."
           exit 1
           
