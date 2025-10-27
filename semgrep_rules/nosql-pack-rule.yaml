@@ -1,9 +1,9 @@
 rules:
   - id: nosql-injection-findone-multi-params
     message: >
-      NoSQL Injection in findOne() query. Multiple user-supplied parameters from request are passed 
-      directly to MongoDB findOne() without validation. An attacker can inject operators like 
-      {"$ne": null} to bypass authentication. Always validate input and use explicit field mapping 
+      NoSQL Injection in findOne() query. Multiple user-supplied parameters from request are passed
+      directly to MongoDB findOne() without validation. An attacker can inject operators like
+      {"$ne": null} to bypass authentication. Always validate input and use explicit field mapping
       instead of spreading request parameters directly into queries.
     languages:
       - javascript
@@ -28,9 +28,9 @@ rules:
 
   - id: nosql-injection-model-constructor
     message: >
-      NoSQL Injection via Model constructor. The entire request body is passed directly to create 
-      a new document without validation. An attacker can inject additional fields or MongoDB operators 
-      to manipulate the document structure. Use explicit field mapping: 
+      NoSQL Injection via Model constructor. The entire request body is passed directly to create
+      a new document without validation. An attacker can inject additional fields or MongoDB operators
+      to manipulate the document structure. Use explicit field mapping:
       `new Model({ field1: req.body.field1, field2: req.body.field2 })` or validate with a schema library.
     languages:
       - javascript
@@ -52,18 +52,18 @@ rules:
               })
       - pattern: |
           const $PACKAGE = new $PAC($INPUT)
-      - metavariable-pattern:
-          metavariable: $INPUT
-          pattern-either:
-            - pattern: req.body
-            - pattern: req.params
-            - pattern: req.query
+    metavariable-pattern:
+      metavariable: $INPUT
+      pattern-either:
+        - pattern: req.body
+        - pattern: req.params
+        - pattern: req.query
 
   - id: nosql-injection-findoneandupdate-body
     message: >
-      NoSQL Injection in findOneAndUpdate(). The request body is assigned to a variable and then 
-      used directly as the update object without sanitization. An attacker can inject MongoDB 
-      operators like {"$set": {...}} or {"$unset": {...}} to modify unintended fields or escalate 
+      NoSQL Injection in findOneAndUpdate(). The request body is assigned to a variable and then
+      used directly as the update object without sanitization. An attacker can inject MongoDB
+      operators like {"$set": {...}} or {"$unset": {...}} to modify unintended fields or escalate
       privileges. Explicitly whitelist allowed update fields.
     languages:
       - javascript
@@ -87,18 +87,18 @@ rules:
           $U = $INPUT;
           ...
           $MODEL.findOneAndUpdate($FILT, $U, ...)
-      - metavariable-pattern:
-          metavariable: $INPUT
-          pattern-either:
-            - pattern: req.body
-            - pattern: req.params
-            - pattern: req.query
+    metavariable-pattern:
+      metavariable: $INPUT
+      pattern-either:
+        - pattern: req.body
+        - pattern: req.params
+        - pattern: req.query
 
   - id: nosql-injection-findoneandupdate-destructured
     message: >
-      NoSQL Injection in findOneAndUpdate() with destructured request data. Values extracted from 
-      the request are used directly in the update object. While destructuring provides some 
-      protection, attackers can still manipulate individual fields. Validate each field's type 
+      NoSQL Injection in findOneAndUpdate() with destructured request data. Values extracted from
+      the request are used directly in the update object. While destructuring provides some
+      protection, attackers can still manipulate individual fields. Validate each field's type
       and value before updating the database.
     languages:
       - javascript
@@ -127,19 +127,19 @@ rules:
               const { $VAL, ... } = $INPUT;
               ...
               $MODEL.findOneAndUpdate($FILT, { $KEY: $VAL, ... }, ...)
-      - metavariable-pattern:
-          metavariable: $INPUT
-          pattern-either:
-            - pattern: req.body
-            - pattern: req.params
-            - pattern: req.query
+    metavariable-pattern:
+      metavariable: $INPUT
+      pattern-either:
+        - pattern: req.body
+        - pattern: req.params
+        - pattern: req.query
 
-- id: nosql-injection-auth-bypass-findone
+  - id: nosql-injection-auth-bypass-findone
     message: >
-      CRITICAL: Authentication bypass via NoSQL Injection in findOne(). Username and password 
-      from request are used directly in authentication query. An attacker can send 
-      {"username": "admin", "password": {"$ne": null}} to bypass password verification and login 
-      as any user. Hash passwords and validate input types before querying. Use: 
+      CRITICAL: Authentication bypass via NoSQL Injection in findOne(). Username and password
+      from request are used directly in authentication query. An attacker can send
+      {"username": "admin", "password": {"$ne": null}} to bypass password verification and login
+      as any user. Hash passwords and validate input types before querying. Use:
       `findOne({ username: String(req.body.username) })` then verify hashed password separately.
     languages:
       - javascript
@@ -169,16 +169,16 @@ rules:
       - pattern-either:
           - pattern: await $MODEL.findOne({ $USERNAME, $PASSWORD })
           - pattern: await $MODEL.findOne({ username: $U, password: $P })
-      - metavariable-pattern:
-          metavariable: $INPUT
-          pattern-either:
-            - pattern: req.body
-            - pattern: req.params
-            - pattern: req.query
+    metavariable-pattern:
+      metavariable: $INPUT
+      pattern-either:
+        - pattern: req.body
+        - pattern: req.params
+        - pattern: req.query
 
   - id: nosql-injection-regexp-user-input
     message: >
-      NoSQL Injection and ReDoS (Regular Expression Denial of Service) vulnerability. User input 
+      NoSQL Injection and ReDoS (Regular Expression Denial of Service) vulnerability. User input
       from request is used to construct a RegExp without sanitization. An attacker can:
       1) Inject a malicious regex pattern causing catastrophic backtracking (ReDoS)
       2) Use the regex in MongoDB queries with $regex operator to bypass filters
@@ -205,18 +205,18 @@ rules:
           const { $PATTERN } = $INPUT;
           ...
       - pattern: new RegExp(...)
-      - metavariable-pattern:
-          metavariable: $INPUT
-          pattern-either:
-            - pattern: req.body
-            - pattern: req.params
-            - pattern: req.query
+    metavariable-pattern:
+      metavariable: $INPUT
+      pattern-either:
+        - pattern: req.body
+        - pattern: req.params
+        - pattern: req.query
 
   - id: nosql-injection-find-query
     message: >
-      NoSQL Injection in find() query. Destructured values from request are used directly in the 
-      query filter. An attacker can inject MongoDB operators to access unauthorized documents or 
-      bypass access controls. Validate and sanitize all query parameters before using them in 
+      NoSQL Injection in find() query. Destructured values from request are used directly in the
+      query filter. An attacker can inject MongoDB operators to access unauthorized documents or
+      bypass access controls. Validate and sanitize all query parameters before using them in
       database operations.
     languages:
       - javascript
@@ -240,18 +240,18 @@ rules:
           const { ..., $VAL, ... } = $INPUT;
           ...
       - pattern: await $MODEL.find({ ..., $VAL, ... })
-      - metavariable-pattern:
-          metavariable: $INPUT
-          pattern-either:
-            - pattern: req.body
-            - pattern: req.params
-            - pattern: req.query
+    metavariable-pattern:
+      metavariable: $INPUT
+      pattern-either:
+        - pattern: req.body
+        - pattern: req.params
+        - pattern: req.query
 
   - id: nosql-injection-findbyid
     message: >
-      Potential NoSQL Injection in findById(). The ID parameter from request is used directly 
-      without validation. While less severe than other injection types, an attacker might inject 
-      malformed IDs to cause errors or probe the system. Validate that the ID matches the expected 
+      Potential NoSQL Injection in findById(). The ID parameter from request is used directly
+      without validation. While less severe than other injection types, an attacker might inject
+      malformed IDs to cause errors or probe the system. Validate that the ID matches the expected
       format (e.g., MongoDB ObjectId) before querying: `mongoose.Types.ObjectId.isValid(id)`.
     languages:
       - javascript
@@ -273,9 +273,9 @@ rules:
 
   - id: nosql-injection-delete-operations
     message: >
-      NoSQL Injection in delete operation. Destructured values from request are used directly 
-      in deleteOne() or deleteMany() filters. An attacker can inject operators like {"$ne": null} 
-      to delete unintended documents or all documents in the collection. Always validate and 
+      NoSQL Injection in delete operation. Destructured values from request are used directly
+      in deleteOne() or deleteMany() filters. An attacker can inject operators like {"$ne": null}
+      to delete unintended documents or all documents in the collection. Always validate and
       restrict delete operations to specific, validated identifiers.
     languages:
       - javascript
@@ -301,9 +301,10 @@ rules:
       - pattern-either:
           - pattern: await $MODEL.deleteOne({ $VAL, ... })
           - pattern: await $MODEL.deleteMany({ $VAL, ... })
-      - metavariable-pattern:
-          metavariable: $INPUT
-          pattern-either:
-            - pattern: req.body
-            - pattern: req.params
-            - pattern: req.query
+    metavariable-pattern:
+      metavariable: $INPUT
+      pattern-either:
+        - pattern: req.body
+        - pattern: req.params
+        - pattern: req.query
+
