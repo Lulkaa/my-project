@@ -1,51 +1,65 @@
 rules:
   - id: nosql-injection-rule
     message: >
-      Possible NoSQL Injection. Unvalidated user input is used directly
-      inside a MongoDB query. This allows attackers to inject query operators (e.g. `$ne`, `$gt`, `$where`)
-      and bypass authentication or access unauthorized data. Validate and sanitize input before using it in database queries,
-      and avoid passing raw request objects to Mongoose methods.
+      Possible NoSQL Injection vulnerability detected.
+      Unvalidated user input is used directly in a MongoDB query or model constructor.
+      This may allow attackers to inject query operators (e.g. `$ne`, `$gt`, `$where`) 
+      and bypass authentication or access unauthorized data.
+      Always validate and sanitize user input before using it in database queries,
+      and never pass raw request objects directly to Mongoose methods.
     languages:
       - javascript
+      - typescript
     severity: ERROR
     metadata:
-      cwe: "CWE-932 Improper Neutralization of Special Elements in Data Query Logic"
+      cwe: "CWE-943: Improper Neutralization of Special Elements in Data Query Logic"
       owasp:
         - "A03:2021 - Injection"
       references:
         - https://owasp.org/Top10/A03_2021-Injection/
       category: security
+      technology:
+        - express
+        - mongoose
+      confidence: MEDIUM
     patterns:
       - pattern-either:
-        - pattern-inside: |
-            router.$METHOD(..., async ($REQ, $RES) => {
-             ...
-            })
-        - pattern-inside: |
-            router.$METHOD(...,  ($REQ, $RES) => {
-             ...
-            })    
+          - pattern-inside: |
+              router.$METHOD(..., async ($REQ, $RES) => {
+                ...
+              })
+          - pattern-inside: |
+              router.$METHOD(..., ($REQ, $RES) => {
+                ...
+              })
       - pattern-either:
           - pattern: |
-              const $USER = await $MODEL.findOne({...,$PARAM1,$PARAM2,...})
+              $MODEL.findOne($INPUT)
           - pattern: |
-              const $PACKAGE = new $PAC($INPUT)
+              $MODEL.find($INPUT)
           - pattern: |
-              $U = $INPUT;
-              ...
-              $MODEL.findOneAndUpdate($FILT, $U, ...)
+              $MODEL.findById($INPUT)
           - pattern: |
-              const { $VAL, ... } = $INPUT;
-              ...
-              $MODEL.findOneAndUpdate($FILT, { $VAL, ... }, ...)
+              $MODEL.findOneAndUpdate($FILT, $UPDATE, ...)
           - pattern: |
-              const { $VAL, ... } = $INPUT;
-              ...
-              $MODEL.findOneAndUpdate($FILT, { $KEY: $VAL, ... }, ...)
-    metavariable-pattern:
+              $MODEL.updateOne($FILT, $UPDATE, ...)
+          - pattern: |
+              $MODEL.updateMany($FILT, $UPDATE, ...)
+          - pattern: |
+              $MODEL.deleteOne($INPUT)
+          - pattern: |
+              $MODEL.deleteMany($INPUT)
+          - pattern: |
+              const $DOC = new $MODEL($INPUT)
+          - pattern: |
+              await $MODEL.create($INPUT)
+      - metavariable-pattern:
           metavariable: $INPUT
           pattern-either:
             - pattern: req.body
             - pattern: req.params
             - pattern: req.query
+            - pattern: req.headers
+            - pattern: req.$FIELD
+
          
