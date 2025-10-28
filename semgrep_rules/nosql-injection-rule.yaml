@@ -25,29 +25,80 @@ rules:
             router.$METHOD(...,  ($REQ, $RES) => {
              ...
             })    
-      - pattern-either:
-          - pattern: |
-              const $USER = await $MODEL.findOne({...,$PARAM1,$PARAM2,...})
-          - pattern: |
-              const $PACKAGE = new $PAC($INPUT)
-          - pattern: |
-              $U = $INPUT;
-              ...
-              $MODEL.findOneAndUpdate($FILT, $U, ...)
-          - pattern: |
-              const { $VAL, ... } = $INPUT;
-              ...
-              $MODEL.findOneAndUpdate($FILT, { $VAL, ... }, ...)
-          - pattern: |
-              const { $VAL, ... } = $INPUT;
-              ...
-              $MODEL.findOneAndUpdate($FILT, { $KEY: $VAL, ... }, ...)
+      pattern-either:
+      - pattern: |
+          const $USER = await $MODEL.findOne({...,$PARAM1,$PARAM2,...})
+      - pattern: |
+          const $LIST = await $MODEL.find({...,$PARAM1,$PARAM2,...})
+      - pattern: |
+          const $LIST = await $MODEL.find($INPUT, ...)
+      - pattern: |
+          const $CNT = await $MODEL.countDocuments({...,$PARAM1,$PARAM2,...})
+      - pattern: |
+          const $CNT = await $MODEL.countDocuments($INPUT, ...)
+      - pattern: |
+          const $DIST = await $MODEL.distinct($FIELD, $INPUT, ...)
+      - pattern: |
+          const $DOC = await $MODEL.findByIdAndUpdate($ID, $INPUT, ...)
+      - pattern: |
+          await $MODEL.updateOne($FILT, $INPUT, ...)
+      - pattern: |
+          await $MODEL.updateMany($FILT, $INPUT, ...)
+      - pattern: |
+          await $MODEL.replaceOne($FILT, $INPUT, ...)
+      - pattern: |
+          const $DEL1 = await $MODEL.deleteOne($INPUT, ...)
+      - pattern: |
+          const $DELN = await $MODEL.deleteMany($INPUT, ...)
+      - pattern: |
+          const $DEL = await $MODEL.findOneAndDelete($INPUT, ...)
+      - pattern: |
+          const $REM = await $MODEL.findOneAndRemove($INPUT, ...)
+      - pattern: |
+          const $AGG = await $MODEL.aggregate([ { $match: $INPUT }, ... ])
+      - pattern: |
+          const $PACKAGE = new $PAC($INPUT) 
+      - pattern: |
+          $F = $INPUT;
+          ...
+          $MODEL.find($F, ...)
+      - pattern: |
+          $F = $INPUT;
+          ...
+          $MODEL.countDocuments($F, ...)
+      - pattern: |
+          $U = $INPUT;
+          ...
+          $MODEL.updateOne($FILT, $U, ...)
+      - pattern: |
+          $U = $INPUT;
+          ...
+          $MODEL.updateMany($FILT, $U, ...) 
+      - pattern: |
+          $U = $INPUT;
+          ...
+          $MODEL.findOneAndUpdate($FILT, $U, ...)
+      - pattern: |
+          const { $VAL, ... } = $INPUT;
+          ...
+          $MODEL.findOneAndUpdate($FILT, { $VAL, ... }, ...)
+      - pattern: |
+          const { $VAL, ... } = $INPUT;
+          ...
+          $MODEL.findOneAndUpdate($FILT, { $KEY: $VAL, ... }, ...)
+      - pattern: |
+          const { $VAL, ... } = $INPUT;
+          ...
+          $MODEL.updateOne($FILT, { $VAL, ... }, ...)
+      - pattern: |
+          const { $VAL, ... } = $INPUT;
+          ...
+          $MODEL.updateOne($FILT, { $KEY: $VAL, ... }, ...)
     metavariable-pattern:
-          metavariable: $INPUT
-          pattern-either:
-            - pattern: req.body
-            - pattern: req.params
-            - pattern: req.query
-            - pattern: req.headers
-            - pattern: req.$FIELD
+      metavariable: $INPUT
+      patterns:
+        - pattern: req.body
+        - pattern: req.params
+        - pattern: req.query
+        - pattern: req.headers
          
