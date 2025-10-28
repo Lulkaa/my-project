@@ -1,3 +1,29 @@
+# 📌 Purpose:
+#   This workflow runs automated Semgrep static code analysis on Pull Requests
+#   (and on-demand) to detect security issues and unsafe coding patterns early.
+#
+# 🔍 What it does:
+#   • Checks out the repository
+#   • Sets up Python and Node.js environments
+#   • Installs Semgrep via pip
+#   • Runs scans using:
+#       - p/r2c-security-audit → community security audit rules
+#       - semgrep_rules/nosql-injection-rule.yaml → custom NoSQL Injection rule
+#   • Generates JSON and TXT reports
+#   • Prints summaries to logs
+#   • Uploads reports as build artifacts
+#   • Builds a formatted PR comment with a 📎 link to reports
+#   • Optionally fails the job if issues are detected
+#
+# ⚙️ Triggers:
+#   • Pull Requests to main or master
+#   • Manual runs via workflow_dispatch
+#
+# 📄 Output:
+#   - semgrep_scan_results.json → Detailed machine-readable report
+#   - semgrep_scan_results.txt  → Console-friendly summary
+#   - PR comment with results and artifact download link
+
 
 name: Semgrep PR Scan
 
