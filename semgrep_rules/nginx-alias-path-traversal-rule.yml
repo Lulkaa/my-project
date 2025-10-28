@@ -1,0 +1,15 @@
+rules:
+  - id: nginx-alias-path-traversal
+    message: Possible Path Traversal vulnerability - location directive without trailing slash combined with alias directive with trailing slash allows directory traversal attacks
+    metadata:
+      cwe: "CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"
+      owasp: "A01:2021 - Broken Access Control"
+    languages:
+      - generic
+    severity: HIGH
+    pattern-either:
+      # Pattern 1: location /something { alias /path/; }
+      - pattern-regex: 'location\s+(/[^/\s]+)\s*\{[^}]*alias\s+[^;]+/\s*;'
+      
+      # Pattern 3: location ~ /something { alias /path/; }
+      - pattern-regex: 'location\s+~\s+(/[^/\s]+)\s*\{[^}]*alias\s+[^;]+/\s*;'
