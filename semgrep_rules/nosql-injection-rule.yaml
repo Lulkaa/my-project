@@ -1,21 +1,21 @@
 rules:
   - id: nosql-injection-rule
     message: >
-      Possible NoSQL Injection. Unvalidated user input is used directly
-      inside a MongoDB query. This allows attackers to inject query operators (e.g. `$ne`, `$gt`, `$where`)
-      and bypass authentication or access unauthorized data. Validate and sanitize input before using it in database queries,
-      and avoid passing raw request objects to Mongoose methods.
+      Possible NoSQL Injection. Unvalidated user input is used directly inside a
+      MongoDB query. This allows attackers to inject query operators (e.g.
+      `$ne`, `$gt`, `$where`) and bypass authentication or access unauthorized
+      data. Validate and sanitize input before using it in database queries, and
+      avoid passing raw request objects to Mongoose methods.
     languages:
       - javascript
     severity: HIGH
     metadata:
-      cwe: "CWE-932 Improper Neutralization of Special Elements in Data Query Logic"
+      cwe: CWE-932 Improper Neutralization of Special Elements in Data Query Logic
       owasp:
-        - "A03:2021 - Injection"
+        - A03:2021 - Injection
       references:
         - https://owasp.org/Top10/A03_2021-Injection/
       category: security
-
     patterns:
       - pattern-either:
           - pattern-inside: |
@@ -33,7 +33,7 @@ rules:
               const $LIST = await $MODEL.find({...,$PARAM1,$PARAM2,...})
           - pattern: |
               const $LIST = await $MODEL.find($INPUT, ...)
-          - pattern: |
+          - pattern: >
               const $CNT = await $MODEL.countDocuments({...,$PARAM1,$PARAM2,...})
           - pattern: |
               const $CNT = await $MODEL.countDocuments($INPUT, ...)
@@ -57,8 +57,11 @@ rules:
               const $REM = await $MODEL.findOneAndRemove($INPUT, ...)
           - pattern: |
               const $AGG = await $MODEL.aggregate([ { $match: $INPUT }, ... ])
-          - pattern: |
-              const $PACKAGE = new $PAC($INPUT)
+          - patterns:
+              - pattern: |
+                  const $PACKAGE = new $PAC($INPUT)
+              - pattern-not: |
+                  const $PACKAGE = new RegExp($INPUT)
           - pattern: |
               $F = $INPUT;
               ...
@@ -95,7 +98,6 @@ rules:
               const { $VAL, ... } = $INPUT;
               ...
               $MODEL.updateOne($FILT, { $KEY: $VAL, ... }, ...)
-
     metavariable-pattern:
       metavariable: $INPUT
       pattern-either:
@@ -103,5 +105,4 @@ rules:
         - pattern: req.params
         - pattern: req.query
         - pattern: req.headers
-
          
