@@ -105,4 +105,3 @@ rules:
         - pattern: req.params
         - pattern: req.query
         - pattern: req.headers
-         
