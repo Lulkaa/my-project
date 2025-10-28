@@ -24,7 +24,6 @@
 #   - semgrep_scan_results.txt  → Console-friendly summary
 #   - PR comment with results and artifact download link
 
-
 name: Semgrep PR Scan
 
 on:
