@@ -1,12 +1,16 @@
 rules:
   - id: XML-External-Entity-Attack-rule
-    message: Possible XXE
+    message: |
+      Possible XML External Entity (XXE) vulnerability detected.
     languages:
       - java
     severity: HIGH
     metadata:
       cwe: "CWE-611: Improper Restriction of XML External Entity Reference"
-      technology: -java -spring -xml
+      technology: 
+        -java 
+        -spring 
+        -xml
     patterns:
       - pattern-either:
           - pattern: $DBF = DocumentBuilderFactory.newInstance();
