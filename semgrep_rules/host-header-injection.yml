@@ -1,0 +1,19 @@
+rules:
+  - id: host-header-injection
+    message: Possible Host Header Injection vulnerability - using req.headers.host in password reset or email links can allow attackers to inject malicious domains
+    metadata:
+      cwe: "CWE-640: Weak Password Recovery Mechanism for Forgotten Password"
+      owasp: "A01:2021 - Broken Access Control"
+    languages:
+      - javascript
+      - typescript
+    severity: HIGH
+    patterns:
+      - pattern-inside: |
+          app.$METHOD($ROUTE, ($REQ, $RES) => {
+            ...
+          })
+      - pattern: |
+          $LINK = `...${$REQ.headers.host}...`
+          ...
+          $TRANSPORTER.sendMail({...})
