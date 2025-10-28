@@ -78,9 +78,9 @@ const mdRow = (r) => {
 const parts = [];
 
 if (!hasIssues) {
-  parts.push('### ✅ Semgrep: no findings found');
+  parts.push('### Semgrep: no findings found');
 } else {
-  parts.push(`### 🔍 Semgrep found ${findings.length} finding(s)`);
+  parts.push(`### Semgrep found ${findings.length} finding(s)`);
   parts.push('');
   parts.push(findings.map(mdRow).join('\n\n'));
   parts.push('');
