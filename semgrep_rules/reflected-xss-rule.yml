@@ -1,0 +1,20 @@
+rules:
+  - id: refleflected-xss-rule
+    message: Possible XSS vulnerability - user input from URL query parameter is directly interpolated into HTML response without escaping
+    metadata:
+      cwe: "CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"
+      owasp: "A03:2021 - Injection"
+    languages:
+      - go
+    severity: HIGH
+    patterns:
+      - pattern-inside: |
+          http.HandleFunc($ROUTE, func($W http.ResponseWriter, $R *http.Request) {
+            ...
+          })
+      - pattern: |
+          $NAME := $R.URL.Query().Get(...)
+          ...
+          $RESPONSE := fmt.Sprintf("...", ..., $NAME, ...)
+          ...
+          fmt.Fprint($W, $RESPONSE)
