@@ -7,7 +7,7 @@ rules:
       and avoid passing raw request objects to Mongoose methods.
     languages:
       - javascript
-    severity: ERROR
+    severity: HIGH
     metadata:
       cwe: "CWE-932 Improper Neutralization of Special Elements in Data Query Logic"
       owasp:
